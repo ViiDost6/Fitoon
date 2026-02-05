@@ -24,17 +24,17 @@ public class Jumpad : MonoBehaviour
             Vector3 directionToPlayer = new Vector3(playerPosition.x - transform.position.x, 0, playerPosition.z - transform.position.z);
             //directionToPlayer.Normalize();
 
-            playerRigidbody.velocity = Vector3.zero;
+            playerRigidbody.linearVelocity = Vector3.zero;
             playerRigidbody.angularVelocity = Vector3.zero;
 
             Vector3 jumpDirection;
 
             if (isRepel) {
-                jumpDirection = other.transform.up * jumpForce + (other.transform.right * directionToPlayer.x + other.transform.forward * directionToPlayer.z) * forwardForce; //Calcular la dirección combinada hacia el Player y hacia arriba
+                jumpDirection = other.transform.up * jumpForce + (other.transform.right * directionToPlayer.x + other.transform.forward * directionToPlayer.z) * forwardForce; //Calcular la direcciï¿½n combinada hacia el Player y hacia arriba
             }
             else {
                 playerRigidbody.rotation = Quaternion.identity;
-                jumpDirection = other.transform.up * jumpForce + other.transform.forward * forwardForce; //Calcular la dirección combinada hacia adelante y hacia arriba
+                jumpDirection = other.transform.up * jumpForce + other.transform.forward * forwardForce; //Calcular la direcciï¿½n combinada hacia adelante y hacia arriba
             }
 
             // Aplicar la fuerza combinada

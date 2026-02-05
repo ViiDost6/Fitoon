@@ -35,7 +35,7 @@ public class BotRunner : BaseRunner
 
 
 
-		/* Si en algún momento se vuelven a entrenar los bots desde cero recomiendo usar esto, o algo parecido a esto
+		/* Si en algï¿½n momento se vuelven a entrenar los bots desde cero recomiendo usar esto, o algo parecido a esto
 		rigidBody.rotation = Quaternion.Slerp(rigidBody.rotation, Quaternion.Euler(0, moveH, 0), rotationSpeed);
 		rigidBody.AddForce(transform.forward * moveV * Mathf.Max(0.1f, speedMultiplier) * baseSpeed, ForceMode.VelocityChange);
 		*/
@@ -54,12 +54,12 @@ public class BotRunner : BaseRunner
 		bool grounded = Physics.Raycast(transform.position, Vector3.down, out hit, 2 * 0.5f + 3f, whatIsGround);
 
 		//Limit velocity
-		Vector3 flatVel = new Vector3(rigidBody.velocity.x, 0f, rigidBody.velocity.z);
+		Vector3 flatVel = new Vector3(rigidBody.linearVelocity.x, 0f, rigidBody.linearVelocity.z);
 
 		if (flatVel.magnitude > baseSpeed)
 		{
 			Vector3 limitedVel = flatVel.normalized * baseSpeed;
-			rigidBody.velocity = new Vector3(limitedVel.x, rigidBody.velocity.y, limitedVel.z);
+			rigidBody.linearVelocity = new Vector3(limitedVel.x, rigidBody.linearVelocity.y, limitedVel.z);
 		}
 
 		//Handle drag
@@ -67,12 +67,12 @@ public class BotRunner : BaseRunner
 
 		if (grounded)
 		{
-			rigidBody.drag = groundDrag;
+			rigidBody.linearDamping = groundDrag;
 		}
 
 		else if (!grounded)
 		{
-			rigidBody.drag = 0;
+			rigidBody.linearDamping = 0;
 		}
 	}
 
@@ -111,11 +111,11 @@ public class BotRunner : BaseRunner
 		{
 			if (rotation.y < 180)
 			{
-				rotation.y = 90; // Ajustar a 90 si está entre 90 y 180
+				rotation.y = 90; // Ajustar a 90 si estï¿½ entre 90 y 180
 			}
 			else
 			{
-				rotation.y = 270; // Ajustar a 270 si está entre 180 y 270
+				rotation.y = 270; // Ajustar a 270 si estï¿½ entre 180 y 270
 			}
 		}
 		return rotation;

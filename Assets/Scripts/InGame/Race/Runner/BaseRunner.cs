@@ -136,7 +136,7 @@ public class BaseRunner : NetworkBehaviour
 
 	protected void BaseUpdate()
 	{
-		//Esto se hace así porque no se sabe exactamente cuando se va a crear el objeto.
+		//Esto se hace asï¿½ porque no se sabe exactamente cuando se va a crear el objeto.
 		if (animator == null)
 		{
 			animator = GetComponentInChildren<Animator>();
@@ -150,7 +150,7 @@ public class BaseRunner : NetworkBehaviour
 	{
 		while (IsOwner)
 		{
-			SetAnimatorParametersServerRpc(rigidBody.velocity.magnitude > 0.3f, !Physics.Raycast(transform.position, Vector3.down, out _, runnerHeight * 0.5f + 1f, whatIsGround), new Vector3(rigidBody.velocity.x, 0, rigidBody.velocity.z).magnitude / 10);
+			SetAnimatorParametersServerRpc(rigidBody.linearVelocity.magnitude > 0.3f, !Physics.Raycast(transform.position, Vector3.down, out _, runnerHeight * 0.5f + 1f, whatIsGround), new Vector3(rigidBody.linearVelocity.x, 0, rigidBody.linearVelocity.z).magnitude / 10);
 			TrailBoostServerRpc(speedMultiplier > 1f);
 			yield return new WaitForSeconds(0.5f);
 		}
@@ -202,7 +202,7 @@ public class BaseRunner : NetworkBehaviour
 		FreezeServerRpc();
 		rigidBody.detectCollisions = false;
 		rigidBody.isKinematic = true;
-		rigidBody.velocity = Vector3.zero;
+		rigidBody.linearVelocity = Vector3.zero;
 		GetComponent<Collider>().enabled = false;
 		FindFirstObjectByType<GameManager>().GoalReached(id.Value);
 	}
@@ -223,7 +223,7 @@ public class BaseRunner : NetworkBehaviour
 			return;
 		//rigidBody.constraints = RigidbodyConstraints.FreezeAll;
 		canMove = false;
-		rigidBody.velocity = Vector3.zero;
+		rigidBody.linearVelocity = Vector3.zero;
 	}
 
 	/// <summary>

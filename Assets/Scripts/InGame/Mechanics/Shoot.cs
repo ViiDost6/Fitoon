@@ -28,7 +28,7 @@ public class Shoot : NetworkBehaviour
 		{
 			GameObject projectile = Instantiate(projectilePrefab, transform);
 			Spawn(projectile);
-			projectile.GetComponent<Rigidbody>().velocity = -transform.forward * projectileSpeed;
+			projectile.GetComponent<Rigidbody>().linearVelocity = -transform.forward * projectileSpeed;
             ShootProjectileObserverRpc();
 		}
 	}

@@ -44,24 +44,24 @@ public class PlayerController : BaseRunner
 			return;
 		}
 		Debug.Log("Player Moving");
-		rigidBody.velocity = new Vector3(0, rigidBody.velocity.y, 0);
-		rigidBody.velocity += baseSpeed * faceTracking.speed * Mathf.Max(0.1f, speedMultiplier) * transform.forward;
+		rigidBody.linearVelocity = new Vector3(0, rigidBody.linearVelocity.y, 0);
+		rigidBody.linearVelocity += baseSpeed * faceTracking.speed * Mathf.Max(0.1f, speedMultiplier) * transform.forward;
 		rigidBody.rotation = Quaternion.Slerp(rigidBody.rotation, faceTracking.faceRotation, rotationSpeed);
 #else
 		if (!canMove || !IsOwner)
 		{
 			return;
 		}
-		rigidBody.velocity = new Vector3(0, rigidBody.velocity.y, 0);
-		rigidBody.velocity += baseSpeed * Mathf.Max(0.1f, speedMultiplier) * transform.forward + 0.01f * Vector3.right;
+		rigidBody.linearVelocity = new Vector3(0, rigidBody.linearVelocity.y, 0);
+		rigidBody.linearVelocity += baseSpeed * Mathf.Max(0.1f, speedMultiplier) * transform.forward + 0.01f * Vector3.right;
 #endif
 		if (Physics.Raycast(transform.position, Vector3.down, out _, runnerHeight * 0.5f + 1f, whatIsGround))
 		{
-			rigidBody.drag = groundDrag;
+			rigidBody.linearDamping = groundDrag;
 		}
 		else
 		{
-			rigidBody.drag = 0;
+			rigidBody.linearDamping = 0;
 		}
 		BaseFixedUpdate();
 	}

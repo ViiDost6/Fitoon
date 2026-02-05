@@ -1,3 +1,4 @@
+#if UNITY_ANDROID
 using System;
 using UnityEngine;
 using GooglePlayGames;
@@ -19,7 +20,7 @@ public class GooglePlayServicesManager : MonoBehaviour
     /// </summary>
     private void Awake()
     {
-        if(GooglePlayServicesManager.instance == null)
+        if (GooglePlayServicesManager.instance == null)
         {
             GooglePlayServicesManager.instance = this;
             SignIn();
@@ -42,7 +43,7 @@ public class GooglePlayServicesManager : MonoBehaviour
 
     private void OnSignInResult(SignInStatus signInStatus)
     {
-        if(signInStatus == SignInStatus.Success)
+        if (signInStatus == SignInStatus.Success)
         {
             Debug.Log("Sign in success");
             SaveData.ReadFromJson();
@@ -52,7 +53,7 @@ public class GooglePlayServicesManager : MonoBehaviour
 
     public void SaveGame(string savedData)
     {
-        if(currentSavedGame == null || !currentSavedGame.IsOpen)
+        if (currentSavedGame == null || !currentSavedGame.IsOpen)
         {
             currentOperation = DataOperation.Save;
             OpenSavedGame();
@@ -66,13 +67,13 @@ public class GooglePlayServicesManager : MonoBehaviour
                 currentSavedGame,
                 update,
                 System.Text.ASCIIEncoding.Default.GetBytes(savedData),
-                (status, updated) => {return;});
+                (status, updated) => { return; });
         Debug.Log("[SAVE] Datos guardados en la nube");
     }
 
     public void LoadGame()
     {
-        if(currentSavedGame == null || !currentSavedGame.IsOpen)
+        if (currentSavedGame == null || !currentSavedGame.IsOpen)
         {
             currentOperation = DataOperation.Load;
             OpenSavedGame();
@@ -86,7 +87,7 @@ public class GooglePlayServicesManager : MonoBehaviour
 
     private void OnSavedGameDataRead(SavedGameRequestStatus status, byte[] data)
     {
-        if(status == SavedGameRequestStatus.Success && data != null && data.Length != 0)
+        if (status == SavedGameRequestStatus.Success && data != null && data.Length != 0)
         {
             string savedData = System.Text.ASCIIEncoding.Default.GetString(data);
             SaveData.ReceiveData(savedData);
@@ -111,11 +112,11 @@ public class GooglePlayServicesManager : MonoBehaviour
 
     private void OnSavedGameOpened(SavedGameRequestStatus status, ISavedGameMetadata game)
     {
-        if(status == SavedGameRequestStatus.Success)
+        if (status == SavedGameRequestStatus.Success)
         {
             currentSavedGame = game;
             ISavedGameClient savedGameClient = PlayGamesPlatform.Instance.SavedGame;
-            if(currentOperation == DataOperation.Load) savedGameClient.ReadBinaryData(currentSavedGame, OnSavedGameDataRead);
+            if (currentOperation == DataOperation.Load) savedGameClient.ReadBinaryData(currentSavedGame, OnSavedGameDataRead);
         }
         else Debug.Log("Error opening saved game: " + status);
     }
@@ -125,3 +126,4 @@ public class GooglePlayServicesManager : MonoBehaviour
         return PlayGamesPlatform.Instance.GetUserDisplayName();
     }
 }
+#endif
