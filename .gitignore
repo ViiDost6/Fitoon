@@ -79,3 +79,4 @@ crashlytics-build.properties
 /Assets/Materials/ARCamTex.renderTexture
 
 /venv/
+user.keystore
