@@ -4,6 +4,24 @@ apply from: '../shared/keepUnitySymbols.gradle'
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    // --- DEPENDENCIAS CORREGIDAS ---
+    // Forzamos Play Services Auth 21.5.0 para evitar el conflicto con Firebase 24.0.1
+    implementation 'com.google.android.gms:play-services-auth:21.5.0'
+    implementation 'com.google.android.gms:play-services-games-v2:21.0.0'
+    implementation 'com.google.android.gms:play-services-base:18.1.0'
+
+    // Firebase (Versiones sincronizadas)
+    implementation 'com.google.firebase:firebase-analytics:23.0.0'
+    implementation 'com.google.firebase:firebase-app-unity:13.7.0'
+    implementation 'com.google.firebase:firebase-auth:24.0.1'
+    implementation 'com.google.firebase:firebase-auth-unity:13.7.0'
+    implementation 'com.google.firebase:firebase-common:22.0.1'
+    implementation 'com.google.firebase:firebase-database:22.0.1'
+    implementation 'com.google.firebase:firebase-database-unity:13.7.0'
+
+    // Eliminamos la línea antigua de gpgs-plugin-support:2.1.0 que causaba el error de Manifest
+    
 // Android Resolver Dependencies Start
     implementation 'com.google.android.gms:play-services-base:18.10.0' // Assets/Firebase/Editor/DatabaseDependencies.xml:20
     implementation 'com.google.firebase:firebase-analytics:23.0.0' // Assets/Firebase/Editor/DatabaseDependencies.xml:18
@@ -19,9 +37,6 @@ dependencies {
 
 // Android Resolver Exclusions Start
 android {
-    namespace "com.unity3d.player"
-    ndkPath "**NDKPATH**"
-    ndkVersion "**NDKVERSION**"
   packaging {
       exclude ('/lib/armeabi/*' + '*')
       exclude ('/lib/mips/*' + '*')
@@ -32,6 +47,18 @@ android {
 }
 // Android Resolver Exclusions End
 android {
+    ndkPath "**NDKPATH**"
+    ndkVersion "**NDKVERSION**"
+    namespace "com.unity3d.player" // Requerido en Unity 6 / Gradle 8+
+    
+    packaging {
+        exclude ('/lib/armeabi/*' + '*')
+        exclude ('/lib/mips/*' + '*')
+        exclude ('/lib/mips64/*' + '*')
+        exclude ('/lib/x86/*' + '*')
+        exclude ('/lib/x86_64/*' + '*')
+    }
+
     compileSdk **APIVERSION**
     buildToolsVersion '**BUILDTOOLS**'
 
@@ -64,3 +91,10 @@ android {
 **IL_CPP_BUILD_SETUP**
 **SOURCE_BUILD_SETUP**
 **EXTERNAL_SOURCES**
+
+// Fuerza bruta final para evitar que Firebase intente meter la versión 20.7.0 por debajo
+configurations.all {
+    resolutionStrategy {
+        force 'com.google.android.gms:play-services-auth:21.5.0'
+    }
+}
