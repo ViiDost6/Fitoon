@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17d7cba8041eac74282bcb752225924f, type: 3}
   m_Name: RollingPier
   m_EditorClassIdentifier: 
-  imagenEscenario: {fileID: 21300000, guid: 8c0a5a76c1c31c846af58260cb053fc2, type: 3}
+  imagenEscenario: {fileID: 21300000, guid: c9342b89aa4f2dd48be4609700c7e148, type: 3}
   nombreEscenario: RollingPierAR
