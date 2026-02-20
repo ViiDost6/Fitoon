@@ -35,6 +35,7 @@ public class GameManager : NetworkBehaviour
     List<BaseRunner> runners = new List<BaseRunner>();
 
     int positionIndex = 0;
+    bool raceFinished = false;
 
 	public override void OnStartServer()
     {
@@ -51,7 +52,6 @@ public class GameManager : NetworkBehaviour
 	{
 		SceneManager.OnLoadEnd += OnSceneLoaded;
 		countdown.StartCountdown();
-		//GetComponent<GameManager>().enabled = false;
 	}
 
 	/// <summary>
@@ -124,6 +124,8 @@ public class GameManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
     public void GoalReached(int id)
 	{
+		if (raceFinished) return;
+
 		Debug.Log("Goal reached by " + id);
 		Runner runner = runnerData.Find((r) => r.id == id);
 		BaseRunner runnerObject = runners.Find((r) => r.GetId() == id);
@@ -132,22 +134,28 @@ public class GameManager : NetworkBehaviour
 		{
 			StartFinishCountdownRpc();
 		}
-		runner.goalReached = true;
-		positionIndex++;
-		try
+
+		if (runner != null && !runner.goalReached)
 		{
-			(runnerObject as PlayerController).SetPosition(positionIndex, runnerData.Count);
+			runner.goalReached = true;
+			positionIndex++;
+
+			try
+			{
+				if (runnerObject is PlayerController player)
+				{
+					player.SetPosition(positionIndex, runnerData.Count);
+				}
+			}
+			catch (InvalidCastException)
+			{
+				Debug.Log("Runner is not a player");
+			}
 		}
-		catch (InvalidCastException)
-		{
-			Debug.Log("Runner is not a player");
-		}
+
 		if (positionIndex >= runnerData.Count)
 		{
-			StopAllCoroutines();
-			positionIndex = 0;
-			runnerData.Clear();
-
+			raceFinished = true;
 			StartCoroutine(FinishRace());
 		}
 	}
@@ -179,15 +187,17 @@ public class GameManager : NetworkBehaviour
 	/// </summary>
 	IEnumerator FinishCountdown()
 	{
-		int countdown = 10;
-		while (countdown > 0)
+		int countdownVal = 10;
+		while (countdownVal > 0 && !raceFinished)
 		{
-			countdownText.text = countdown.ToString();
+			countdownText.text = countdownVal.ToString();
 			yield return new WaitForSeconds(1);
-			countdown--;
+			countdownVal--;
 		}
-		if (IsServerInitialized)
+
+		if (IsServerInitialized && !raceFinished)
 		{
+			raceFinished = true;
 			FreezeAllRunners();
 			SortRunners();
 			yield return new WaitForSeconds(1);
@@ -200,25 +210,28 @@ public class GameManager : NetworkBehaviour
 	/// </summary>
 	void SortRunners()
 	{
-		List<Runner> sortedRunners = runnerData.OrderBy((runner) =>
-		{
-			BaseRunner runnerObject = runners.Find((r) => r.GetId() == runner.id);
-			return Vector3.Distance(runnerObject.transform.position, goal.position);
-		}).ToList();
+		List<Runner> sortedRunners = runnerData
+			.Where(r => !r.goalReached)
+			.OrderBy(runner => 
+			{
+				BaseRunner runnerObj = runners.Find(r => r.GetId() == runner.id);
+				return Vector3.Distance(runnerObj.transform.position, goal.position);
+			}).ToList();
+
 		for (int i = 0; i < sortedRunners.Count; i++)
 		{
-			if (!sortedRunners[i].goalReached)
+			positionIndex++;
+			BaseRunner runnerObject = runners.Find((r) => r.GetId() == sortedRunners[i].id);
+			try
 			{
-				positionIndex++;
-				BaseRunner runnerObject = runners.Find((r) => r.GetId() == sortedRunners[i].id);
-				try
+				if (runnerObject is PlayerController player)
 				{
-					(runnerObject as PlayerController).SetPosition(positionIndex, runnerData.Count);
+					player.SetPosition(positionIndex, runnerData.Count);
 				}
-				catch (InvalidCastException)
-				{
-					Debug.Log("Runner is not a player");
-				}
+			}
+			catch (InvalidCastException)
+			{
+				Debug.Log("Runner is not a player");
 			}
 		}
 	}
@@ -244,7 +257,6 @@ public class GameManager : NetworkBehaviour
 		yield return StartCoroutine(WaitForCountdown());
 		Debug.Log("Countdown finished");
 		UnfreezeAllRunners();
-
 	}
 
 	public IEnumerator WaitForCountdown()
@@ -256,6 +268,7 @@ public class GameManager : NetworkBehaviour
 /// <summary>
 /// This class is used to store the data of each runner. A runner can be a player or a bot.
 /// </summary>
+[Serializable]
 public class Runner
 {
 	public int id;
