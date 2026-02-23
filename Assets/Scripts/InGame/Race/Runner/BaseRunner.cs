@@ -44,7 +44,10 @@ public class BaseRunner : NetworkBehaviour
 
 	private void OnDestroy()
 	{
-		StopCoroutine(animatorCoroutine);
+		if (animatorCoroutine != null)
+		{
+			StopCoroutine(animatorCoroutine);
+		}
 	}
 
 	/// <summary>

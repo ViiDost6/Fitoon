@@ -108,6 +108,8 @@ namespace FishNet.Discovery
 
 		private void OnEnable()
 		{
+			if (_networkManager == null) {return;}
+
 			if (!automatic) return;
 
 			_networkManager.ServerManager.OnServerConnectionState += ServerConnectionStateChangedEventHandler;
@@ -135,12 +137,11 @@ namespace FishNet.Discovery
 		/// </summary>
 		private void Shutdown()
 		{
-			if (_networkManager != null)
-			{
-				_networkManager.ServerManager.OnServerConnectionState -= ServerConnectionStateChangedEventHandler;
+			if (_networkManager == null) return;
 
-				_networkManager.ClientManager.OnClientConnectionState -= ClientConnectionStateChangedEventHandler;
-			}
+			_networkManager.ServerManager.OnServerConnectionState -= ServerConnectionStateChangedEventHandler;
+
+			_networkManager.ClientManager.OnClientConnectionState -= ClientConnectionStateChangedEventHandler;
 
 			StopSearchingOrAdvertising();
 		}
@@ -159,6 +160,8 @@ namespace FishNet.Discovery
 
 		private void ClientConnectionStateChangedEventHandler(ClientConnectionStateArgs args)
 		{
+			if (_networkManager == null) {return;}
+			
 			if (_networkManager.IsServerStarted) return;
 
 			if (args.ConnectionState == LocalConnectionState.Started)

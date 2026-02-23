@@ -16,264 +16,247 @@ using UnityEngine;
 /// </summary>
 public class GameManager : NetworkBehaviour
 {
-	int readyPlayers;
-	public List<Runner> runnerData;
+    int readyPlayers;
+    public List<Runner> runnerData;
 
-	[SerializeField] public TextMeshProUGUI cadenceText;
-	[SerializeField] public TextMeshProUGUI velocityText;
-	[SerializeField] public TextMeshProUGUI positionText;
-	[SerializeField] public TextMeshProUGUI countdownText;
-	[SerializeField] Transform goal;
-	[SerializeField] Transform[] spawnPoints;
+    [SerializeField] public TextMeshProUGUI cadenceText;
+    [SerializeField] public TextMeshProUGUI velocityText;
+    [SerializeField] public TextMeshProUGUI positionText;
+    [SerializeField] public TextMeshProUGUI countdownText;
+    [SerializeField] Transform goal;
+    [SerializeField] Transform[] spawnPoints;
     [SerializeField] NetworkObject playerPrefab;
     [SerializeField] NetworkObject botPrefab;
     [SerializeField] public Countdown countdown;
     [SerializeField] EscenarioItem scene;
 
-    public static bool addBots = false;	//Set to true to add bots to the race
+    public static bool addBots = false;
     
     List<BaseRunner> runners = new List<BaseRunner>();
-
     int positionIndex = 0;
     bool raceFinished = false;
 
-	public override void OnStartServer()
+    // Track coroutines to stop them safely
+    private Coroutine _waitForPlayersRoutine;
+    private Coroutine _finishRaceRoutine;
+    private Coroutine _finishCountdownRoutine;
+
+    public override void OnStartServer()
     {
-		SceneManager.OnLoadEnd += OnSceneLoaded;
-		StartCoroutine(WaitForPlayers());
-	}
-
-	private void OnSceneLoaded(SceneLoadEndEventArgs args)
-	{
-		readyPlayers++;
-	}
-
-	public override void OnStartClient()
-	{
-		SceneManager.OnLoadEnd += OnSceneLoaded;
-		countdown.StartCountdown();
-	}
-
-	/// <summary>
-	/// Freezes all player movement.
-	/// </summary>
-	void FreezeAllRunners()
-	{
-		for (int i = 0; i < runners.Count; i++)
-		{
-			runners[i].Freeze();
-			runners[i].canMove = false;
-		}
-	}
-
-	/// <summary>
-	/// Unfreezes all player movement.
-	/// </summary>
-	void UnfreezeAllRunners()
-    {
-        for(int i = 0; i < runners.Count; i++)
-        {
-			Debug.Log("Unfreezing runner");
-			runners[i].UnFreeze();
-			runners[i].canMove = true;
-		}
+        SceneManager.OnLoadEnd += OnSceneLoaded;
+        _waitForPlayersRoutine = StartCoroutine(WaitForPlayers());
     }
 
-	/// <summary>
-	/// This method instantiates the runners and spawns them over the network.
-	/// </summary>
-	void SpawnRunners()
+    private void OnSceneLoaded(SceneLoadEndEventArgs args)
     {
-		for (int i = 0; i < runnerData.Count; i++)
-		{
-			runnerData[i].goalReached = false;
-			NetworkObject runnerObject = Instantiate(runnerData[i].connection != null ? playerPrefab : botPrefab, spawnPoints[i].position, spawnPoints[i].rotation, transform);
-            BaseRunner runner = runnerObject.GetComponent<BaseRunner>();
-            Debug.Log("Adding runner: " + runnerData[i].characterData.characterName);
-			runners.Add(runner);
-			runner.SetId(runnerData[i].id);
-            Debug.Log("RunnerConnection: " + runnerData[i].connection);
-			Spawn(runnerObject, runnerData[i].connection);
-		}
-	}
+        readyPlayers++;
+    }
 
-	/// <summary>
-	/// This method initializes the bots with random data.
-	/// </summary>
-	void InitializeBots()
+    public override void OnStartClient()
     {
-        while (runnerData.Count < 32)
+        SceneManager.OnLoadEnd += OnSceneLoaded;
+        if (countdown != null) countdown.StartCountdown();
+    }
+
+    private void OnDestroy()
+    {
+        // Safely stop tracked coroutines instead of using StopAllCoroutines()
+        if (_waitForPlayersRoutine != null) StopCoroutine(_waitForPlayersRoutine);
+        if (_finishRaceRoutine != null) StopCoroutine(_finishRaceRoutine);
+        if (_finishCountdownRoutine != null) StopCoroutine(_finishCountdownRoutine);
+        
+        if (SceneManager != null)
         {
-            runnerData.Add
-            (
-                new Runner
-                {
-                    id = runnerData.Count,
-                    connection = null,
-                    characterData = CharacterLoader.CreateRandomCharacterData(),
-					name = "Runner #" + runnerData.Count.ToString().PadLeft(2, '0')
-				}
-            );
+            SceneManager.OnLoadEnd -= OnSceneLoaded;
         }
     }
 
-	/// <summary>
-	/// This method is called when a player reaches the goal. It updates the player's data and checks if all players have finished. If it's the first player to finish, it starts the countdown.
-	/// </summary>
-	/// <param name="id"></param>
-	[ServerRpc(RequireOwnership = false)]
-    public void GoalReached(int id)
-	{
-		if (raceFinished) return;
-
-		Debug.Log("Goal reached by " + id);
-		Runner runner = runnerData.Find((r) => r.id == id);
-		BaseRunner runnerObject = runners.Find((r) => r.GetId() == id);
-
-		if(positionIndex == 0)
-		{
-			StartFinishCountdownRpc();
-		}
-
-		if (runner != null && !runner.goalReached)
-		{
-			runner.goalReached = true;
-			positionIndex++;
-
-			try
-			{
-				if (runnerObject is PlayerController player)
-				{
-					player.SetPosition(positionIndex, runnerData.Count);
-				}
-			}
-			catch (InvalidCastException)
-			{
-				Debug.Log("Runner is not a player");
-			}
-		}
-
-		if (positionIndex >= runnerData.Count)
-		{
-			raceFinished = true;
-			StartCoroutine(FinishRace());
-		}
-	}
-
-	/// <summary>
-	/// This coroutine waits for a few seconds and then loads the lobby scene.
-	/// </summary>
-	IEnumerator FinishRace()
-	{
-		yield return new WaitForSeconds(1);
-
-		LobbyManager.runnerData = new List<Runner>();
-
-		SceneLoadData sld = new SceneLoadData("LobbyScene");
-		SceneManager.LoadGlobalScenes(sld);
-
-		SceneUnloadData sud = new SceneUnloadData(scene.nombreEscenario);
-		SceneManager.UnloadGlobalScenes(sud);
-	}
-
-	[ObserversRpc(ExcludeServer = false)]
-	void StartFinishCountdownRpc()
-	{
-		StartCoroutine(FinishCountdown());
-	}
-
-	/// <summary>
-	/// This coroutine handles the countdown for the finish line. It updates the countdown text every second and then freezes all runners and sorts them based on their distance to the goal.
-	/// </summary>
-	IEnumerator FinishCountdown()
-	{
-		int countdownVal = 10;
-		while (countdownVal > 0 && !raceFinished)
-		{
-			countdownText.text = countdownVal.ToString();
-			yield return new WaitForSeconds(1);
-			countdownVal--;
-		}
-
-		if (IsServerInitialized && !raceFinished)
-		{
-			raceFinished = true;
-			FreezeAllRunners();
-			SortRunners();
-			yield return new WaitForSeconds(1);
-			StartCoroutine(FinishRace());
-		}
-	}
-
-	/// <summary>
-	/// This method sorts the runners based on their distance to the goal. It updates the position of each runner and sets their position text.
-	/// </summary>
-	void SortRunners()
-	{
-		List<Runner> sortedRunners = runnerData
-			.Where(r => !r.goalReached)
-			.OrderBy(runner => 
-			{
-				BaseRunner runnerObj = runners.Find(r => r.GetId() == runner.id);
-				return Vector3.Distance(runnerObj.transform.position, goal.position);
-			}).ToList();
-
-		for (int i = 0; i < sortedRunners.Count; i++)
-		{
-			positionIndex++;
-			BaseRunner runnerObject = runners.Find((r) => r.GetId() == sortedRunners[i].id);
-			try
-			{
-				if (runnerObject is PlayerController player)
-				{
-					player.SetPosition(positionIndex, runnerData.Count);
-				}
-			}
-			catch (InvalidCastException)
-			{
-				Debug.Log("Runner is not a player");
-			}
-		}
-	}
-
-	/// <summary>
-	/// This coroutine waits a little bit to give time to all players to change scene. Then it initializes the bots if needed. Finally, it spawns the runners and starts the countdown.
-	/// </summary>
-	IEnumerator WaitForPlayers()
-	{
-		yield return new WaitUntil(() => readyPlayers == 2);
-		yield return new WaitForSeconds(1);
-
-		Debug.Log("All players ready");
-
-		runnerData = LobbyManager.runnerData;
-		LobbyManager.runnerData = null;
-
-		if (addBots)
-			InitializeBots();
-		Debug.Log("Initialized bots");
-		SpawnRunners();
-
-		yield return StartCoroutine(WaitForCountdown());
-		Debug.Log("Countdown finished");
-		UnfreezeAllRunners();
-	}
-
-	public IEnumerator WaitForCountdown()
+    void FreezeAllRunners()
     {
+        for (int i = 0; i < runners.Count; i++)
+        {
+            if (runners[i] != null)
+            {
+                runners[i].Freeze();
+                runners[i].canMove = false;
+            }
+        }
+    }
+
+    void UnfreezeAllRunners()
+    {
+        for(int i = 0; i < runners.Count; i++)
+        {
+            if (runners[i] != null)
+            {
+                runners[i].UnFreeze();
+                runners[i].canMove = true;
+            }
+        }
+    }
+
+    void SpawnRunners()
+    {
+        for (int i = 0; i < runnerData.Count; i++)
+        {
+            runnerData[i].goalReached = false;
+            NetworkObject runnerObject = Instantiate(runnerData[i].connection != null ? playerPrefab : botPrefab, spawnPoints[i].position, spawnPoints[i].rotation, transform);
+            BaseRunner runner = runnerObject.GetComponent<BaseRunner>();
+            runners.Add(runner);
+            runner.SetId(runnerData[i].id);
+            Spawn(runnerObject, runnerData[i].connection);
+        }
+    }
+
+    void InitializeBots()
+    {
+        while (runnerData.Count < 32)
+        {
+            runnerData.Add(new Runner {
+                id = runnerData.Count,
+                connection = null,
+                characterData = CharacterLoader.CreateRandomCharacterData(),
+                name = "Runner #" + runnerData.Count.ToString().PadLeft(2, '0')
+            });
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void GoalReached(int id)
+    {
+        if (raceFinished) return;
+
+        Runner runner = runnerData.Find((r) => r.id == id);
+        BaseRunner runnerObject = runners.Find((r) => r.GetId() == id);
+
+        if(positionIndex == 0)
+        {
+            StartFinishCountdownRpc();
+        }
+
+        if (runner != null && !runner.goalReached)
+        {
+            runner.goalReached = true;
+            positionIndex++;
+
+            if (runnerObject is PlayerController player)
+            {
+                player.SetPosition(positionIndex, runnerData.Count);
+            }
+        }
+
+        if (positionIndex >= runnerData.Count)
+        {
+            raceFinished = true;
+            if (_finishRaceRoutine == null) 
+                _finishRaceRoutine = StartCoroutine(FinishRace());
+        }
+    }
+
+    IEnumerator FinishRace()
+    {
+        raceFinished = true; 
+        yield return new WaitForSeconds(0.1f); 
+
+        if (IsServerInitialized)
+        {
+            // Despawn network objects safely
+            foreach (var runner in runners)
+            {
+                if (runner != null && runner.NetworkObject != null && runner.NetworkObject.IsSpawned)
+                {
+                    runner.NetworkObject.Despawn();
+                }
+            }
+
+            LobbyManager.runnerData = new List<Runner>();
+
+            SceneLoadData sld = new SceneLoadData("LobbyScene");
+            SceneManager.LoadGlobalScenes(sld);
+
+            if (scene != null)
+            {
+                SceneUnloadData sud = new SceneUnloadData(scene.nombreEscenario);
+                SceneManager.UnloadGlobalScenes(sud);
+            }
+        }
+    }
+
+    [ObserversRpc(ExcludeServer = false)]
+    void StartFinishCountdownRpc()
+    {
+        if (_finishCountdownRoutine == null)
+            _finishCountdownRoutine = StartCoroutine(FinishCountdown());
+    }
+
+    IEnumerator FinishCountdown()
+    {
+        int countdownVal = 10;
+        
+        while (countdownVal > 0 && !raceFinished && this != null)
+        {
+            if (countdownText != null) countdownText.text = countdownVal.ToString();
+            yield return new WaitForSeconds(1);
+            countdownVal--;
+        }
+
+        if (this != null && IsServerInitialized && !raceFinished)
+        {
+            raceFinished = true; 
+            SortRunners(); 
+            
+            if (_finishRaceRoutine == null)
+                _finishRaceRoutine = StartCoroutine(FinishRace()); 
+        }
+    }
+
+    void SortRunners()
+    {
+        var remaining = runnerData.Where(r => !r.goalReached).ToList();
+        List<Runner> sortedRunners = remaining.OrderBy((runner) => {
+            BaseRunner runnerObject = runners.Find((r) => r.GetId() == runner.id);
+            return runnerObject != null ? Vector3.Distance(runnerObject.transform.position, goal.position) : float.MaxValue;
+        }).ToList();
+
+        foreach (var runner in sortedRunners)
+        {
+            positionIndex++;
+            BaseRunner runnerObject = runners.Find((r) => r.GetId() == runner.id);
+            if (runnerObject is PlayerController player)
+            {
+                player.SetPosition(positionIndex, runnerData.Count);
+            }
+        }
+    }
+
+    IEnumerator WaitForPlayers()
+    {
+        yield return new WaitUntil(() => readyPlayers >= 2 || (readyPlayers >= 1 && addBots));
+        yield return new WaitForSeconds(1);
+
+        runnerData = LobbyManager.runnerData;
+        LobbyManager.runnerData = null;
+
+        if (addBots) InitializeBots();
+        SpawnRunners();
+
+        yield return StartCoroutine(WaitForCountdown());
+        UnfreezeAllRunners();
+    }
+
+    public IEnumerator WaitForCountdown()
+    {
+        if (countdown == null) yield break;
         yield return new WaitUntil(() => countdown.HasFinished());
-	}
+    }
 }
 
-/// <summary>
-/// This class is used to store the data of each runner. A runner can be a player or a bot.
-/// </summary>
 [Serializable]
 public class Runner
 {
-	public int id;
+    public int id;
     public string name;
-	public NetworkConnection connection; // if null, it's a bot
-	public CharacterData characterData;
-	public bool goalReached = false;
+    public NetworkConnection connection;
+    public CharacterData characterData;
+    public bool goalReached = false;
 }
