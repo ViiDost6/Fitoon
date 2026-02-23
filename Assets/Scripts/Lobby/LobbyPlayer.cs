@@ -1,3 +1,4 @@
+// LobbyPlayer.cs
 using FishNet;
 using FishNet.Connection;
 using FishNet.Discovery;

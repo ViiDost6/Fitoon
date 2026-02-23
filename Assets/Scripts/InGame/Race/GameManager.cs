@@ -1,3 +1,4 @@
+// GameManager.cs
 using FishNet;
 using FishNet.Component.Spawning;
 using FishNet.Connection;
@@ -36,15 +37,10 @@ public class GameManager : NetworkBehaviour
     int positionIndex = 0;
     bool raceFinished = false;
 
-    // Track coroutines to stop them safely
-    private Coroutine _waitForPlayersRoutine;
-    private Coroutine _finishRaceRoutine;
-    private Coroutine _finishCountdownRoutine;
-
     public override void OnStartServer()
     {
         SceneManager.OnLoadEnd += OnSceneLoaded;
-        _waitForPlayersRoutine = StartCoroutine(WaitForPlayers());
+        StartCoroutine(WaitForPlayers());
     }
 
     private void OnSceneLoaded(SceneLoadEndEventArgs args)
@@ -60,10 +56,7 @@ public class GameManager : NetworkBehaviour
 
     private void OnDestroy()
     {
-        // Safely stop tracked coroutines instead of using StopAllCoroutines()
-        if (_waitForPlayersRoutine != null) StopCoroutine(_waitForPlayersRoutine);
-        if (_finishRaceRoutine != null) StopCoroutine(_finishRaceRoutine);
-        if (_finishCountdownRoutine != null) StopCoroutine(_finishCountdownRoutine);
+        StopAllCoroutines(); // Detiene las corrutinas de Unity inmediatamente
         
         if (SceneManager != null)
         {
@@ -148,19 +141,20 @@ public class GameManager : NetworkBehaviour
         if (positionIndex >= runnerData.Count)
         {
             raceFinished = true;
-            if (_finishRaceRoutine == null) 
-                _finishRaceRoutine = StartCoroutine(FinishRace());
+            StartCoroutine(FinishRace());
         }
     }
 
+    // En GameManager.cs -> Corrutina FinishRace
     IEnumerator FinishRace()
     {
-        raceFinished = true; 
-        yield return new WaitForSeconds(0.1f); 
+        raceFinished = true; // Asegura que FinishCountdown se detenga en el siguiente tick
+        yield return new WaitForSeconds(0.1f); // Breve respiro para sincronizar el flag
 
         if (IsServerInitialized)
         {
-            // Despawn network objects safely
+            // --- THE FIX: ADD THIS DESPAWN LOOP BACK ---
+            // Safely remove all network objects before Unity destroys the scene
             foreach (var runner in runners)
             {
                 if (runner != null && runner.NetworkObject != null && runner.NetworkObject.IsSpawned)
@@ -168,7 +162,9 @@ public class GameManager : NetworkBehaviour
                     runner.NetworkObject.Despawn();
                 }
             }
+            // -------------------------------------------
 
+            // Limpiamos la lista estática antes de cambiar para evitar que el nuevo Lobby lea basura
             LobbyManager.runnerData = new List<Runner>();
 
             SceneLoadData sld = new SceneLoadData("LobbyScene");
@@ -185,14 +181,13 @@ public class GameManager : NetworkBehaviour
     [ObserversRpc(ExcludeServer = false)]
     void StartFinishCountdownRpc()
     {
-        if (_finishCountdownRoutine == null)
-            _finishCountdownRoutine = StartCoroutine(FinishCountdown());
+        StartCoroutine(FinishCountdown());
     }
 
     IEnumerator FinishCountdown()
     {
         int countdownVal = 10;
-        
+        // Añadimos comprobación de existencia del objeto (this != null)
         while (countdownVal > 0 && !raceFinished && this != null)
         {
             if (countdownText != null) countdownText.text = countdownVal.ToString();
@@ -202,11 +197,14 @@ public class GameManager : NetworkBehaviour
 
         if (this != null && IsServerInitialized && !raceFinished)
         {
+            // 1. Mark the race as finished to stop other logic
             raceFinished = true; 
-            SortRunners(); 
             
-            if (_finishRaceRoutine == null)
-                _finishRaceRoutine = StartCoroutine(FinishRace()); 
+            // 2. Assign placements to players who didn't cross the finish line
+            SortRunners(); 
+
+            // 3. Trigger the scene transition to the Lobby
+            StartCoroutine(FinishRace()); 
         }
     }
 

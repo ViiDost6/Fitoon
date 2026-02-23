@@ -1,3 +1,4 @@
+// BaseRunner.cs
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -12,7 +13,6 @@ using System.Linq;
 /// </summary>
 public class BaseRunner : NetworkBehaviour
 {
-
 	protected GameObject characterObject;
 	[SerializeField] protected float baseSpeed;
 	[SerializeField] protected float rotationSpeed = 1;
@@ -31,10 +31,17 @@ public class BaseRunner : NetworkBehaviour
 	protected float speedMultiplier = 1;
 	public bool canMove = true;
 
+	[Header("Bot Character Models")]
+	[SerializeField] protected List<GameObject> botPrefabList;
+
+	public readonly SyncVar<int> syncedBotPrefabIndex = new SyncVar<int>(-1);
+
 	private void Awake()
 	{
 		rigidBody = GetComponent<Rigidbody>();
 		rigidBody.detectCollisions = true;
+
+		syncedBotPrefabIndex.OnChange += OnBotPrefabChanged;
 	}
 
 	protected void BaseAwake()
@@ -48,11 +55,38 @@ public class BaseRunner : NetworkBehaviour
 		{
 			StopCoroutine(animatorCoroutine);
 		}
+		
+		syncedBotPrefabIndex.OnChange -= OnBotPrefabChanged;
 	}
 
-	/// <summary>
-	/// Sets the character data and name tag for the player.
-	/// </summary>
+	protected void PickRandomBotCharacter()
+	{
+		if (!IsServerInitialized) return;
+
+		if (botPrefabList == null || botPrefabList.Count == 0)
+		{
+			Debug.LogError("Bot Prefab List is empty! Please assign prefabs in the Inspector.");
+			return;
+		}
+
+		syncedBotPrefabIndex.Value = UnityEngine.Random.Range(0, botPrefabList.Count);
+	}
+
+	void OnBotPrefabChanged(int oldIndex, int newIndex, bool asServer)
+	{
+		if (newIndex < 0 || botPrefabList == null || newIndex >= botPrefabList.Count) return;
+
+		if (characterObject != null) Destroy(characterObject);
+
+		GameObject selectedPrefab = botPrefabList[newIndex];
+		characterObject = Instantiate(selectedPrefab, transform.position - Vector3.up, Quaternion.identity, transform);
+		characterObject.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+		animator = characterObject.GetComponentInChildren<Animator>();
+		
+		SetNameTag("Bot"); 
+	}
+
 	[ServerRpc]
 	protected void SetCharacter(CharacterData characterData, string playerName)
 	{
@@ -68,9 +102,6 @@ public class BaseRunner : NetworkBehaviour
 		nameTag.text = name;
 	}
 
-	/// <summary>
-	/// This method is used to load the character data. It instantiates the character prefab and sets its colors.
-	/// </summary>
 	[ObserversRpc]
 	void LoadCharacter(CharacterData characterData)
 	{
@@ -109,7 +140,6 @@ public class BaseRunner : NetworkBehaviour
 
 	protected void BaseFixedUpdate()
 	{
-		//Slow down character speed boost
 		if (speedMultiplier > 1f)
 		{
 			speedMultiplier -= 0.01f;
@@ -139,22 +169,40 @@ public class BaseRunner : NetworkBehaviour
 
 	protected void BaseUpdate()
 	{
-		//Esto se hace as� porque no se sabe exactamente cuando se va a crear el objeto.
 		if (animator == null)
 		{
 			animator = GetComponentInChildren<Animator>();
 		}
 	}
 
-	/// <summary>
-	/// Updates the character animations every 0.5 seconds.
-	/// </summary>
+	protected virtual bool HasAnimationAuthority()
+	{
+		return IsOwner; 
+	}
+
 	IEnumerator UpdateAnimatorAndBoostTrail()
 	{
-		while (IsOwner)
+		while (true)
 		{
-			SetAnimatorParametersServerRpc(rigidBody.linearVelocity.magnitude > 0.3f, !Physics.Raycast(transform.position, Vector3.down, out _, runnerHeight * 0.5f + 1f, whatIsGround), new Vector3(rigidBody.linearVelocity.x, 0, rigidBody.linearVelocity.z).magnitude / 10);
-			TrailBoostServerRpc(speedMultiplier > 1f);
+			if (HasAnimationAuthority())
+			{
+				bool isRunning = rigidBody.linearVelocity.magnitude > 0.3f;
+				bool isFalling = !Physics.Raycast(transform.position, Vector3.down, out _, runnerHeight * 0.5f + 1f, whatIsGround);
+				float speed = new Vector3(rigidBody.linearVelocity.x, 0, rigidBody.linearVelocity.z).magnitude / 10;
+				bool isBoosting = speedMultiplier > 1f;
+
+				if (IsServerInitialized)
+				{
+					SetAnimatorParametersObserversRpc(isRunning, isFalling, speed);
+					TrailBoostRpc(isBoosting);
+				}
+				else
+				{
+					SetAnimatorParametersServerRpc(isRunning, isFalling, speed);
+					TrailBoostServerRpc(isBoosting);
+				}
+			}
+			
 			yield return new WaitForSeconds(0.5f);
 		}
 	}
@@ -194,9 +242,6 @@ public class BaseRunner : NetworkBehaviour
 		}
 	}
 
-	/// <summary>
-	/// Called when the player reaches the goal. It freezes the player and notifies the GameManager.
-	/// </summary>
 	void GoalReached()
 	{
 		if(!IsOwner)
@@ -210,9 +255,6 @@ public class BaseRunner : NetworkBehaviour
 		FindFirstObjectByType<GameManager>().GoalReached(id.Value);
 	}
 
-	/// <summary>
-	/// Freezes the player movement and sets the velocity to zero.
-	/// </summary>
 	[ServerRpc]
 	void FreezeServerRpc()
 	{
@@ -224,20 +266,15 @@ public class BaseRunner : NetworkBehaviour
 	{
 		if (!IsOwner)
 			return;
-		//rigidBody.constraints = RigidbodyConstraints.FreezeAll;
 		canMove = false;
 		rigidBody.linearVelocity = Vector3.zero;
 	}
 
-	/// <summary>
-	/// Unfreezes the player movement.
-	/// </summary>
 	[ObserversRpc(ExcludeServer = false, ExcludeOwner = false)]
 	public void UnFreeze()
 	{
 		if (!IsOwner)
 			return;
-		//rigidBody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 		Debug.Log("I'm Unfreezing");
 		canMove = true;
 	}

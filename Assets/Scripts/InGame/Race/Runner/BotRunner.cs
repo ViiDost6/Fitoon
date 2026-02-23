@@ -1,3 +1,4 @@
+// BotRunner.cs
 using System.Collections;
 using System.Collections.Generic;
 using Unity.MLAgents;
@@ -12,6 +13,11 @@ public class BotRunner : BaseRunner
     float moveV;
     float moveH;
 
+	protected override bool HasAnimationAuthority()
+	{
+		return IsServerInitialized;
+	}
+
 	void FixedUpdate()
     {
 		if (!canMove || !IsServerInitialized)
@@ -19,11 +25,8 @@ public class BotRunner : BaseRunner
 			return;
 		}
 
-		//-------------------------------------------------------------------------------
-		//Esto no tiene mucho sentido, pero es la forma en la que han entrenado los bots
 		rigidBody.AddForce(transform.forward * baseSpeed * 10f, ForceMode.Force);
 
-		//Rotate Player based on Horizontal input
 		Vector3 rotation = new Vector3(0, moveH * rotationSpeed, 0);
 		Vector3 currentRotation = transform.rotation.eulerAngles;
 		Vector3 limitedRotation = RotationLimited(currentRotation);
@@ -31,14 +34,7 @@ public class BotRunner : BaseRunner
 
 		Vector3 moveDirection = transform.forward * moveV + transform.right * moveH;
 		if (moveV != 0) rigidBody.AddForce(moveDirection.normalized * baseSpeed * 10f * Mathf.Max(0.1f, speedMultiplier), ForceMode.Force);
-		//-------------------------------------------------------------------------------
-
-
-
-		/* Si en alg�n momento se vuelven a entrenar los bots desde cero recomiendo usar esto, o algo parecido a esto
-		rigidBody.rotation = Quaternion.Slerp(rigidBody.rotation, Quaternion.Euler(0, moveH, 0), rotationSpeed);
-		rigidBody.AddForce(transform.forward * moveV * Mathf.Max(0.1f, speedMultiplier) * baseSpeed, ForceMode.VelocityChange);
-		*/
+		
 		BaseFixedUpdate();
 	}
 
@@ -53,7 +49,6 @@ public class BotRunner : BaseRunner
 		RaycastHit hit;
 		bool grounded = Physics.Raycast(transform.position, Vector3.down, out hit, 2 * 0.5f + 3f, whatIsGround);
 
-		//Limit velocity
 		Vector3 flatVel = new Vector3(rigidBody.linearVelocity.x, 0f, rigidBody.linearVelocity.z);
 
 		if (flatVel.magnitude > baseSpeed)
@@ -62,14 +57,10 @@ public class BotRunner : BaseRunner
 			rigidBody.linearVelocity = new Vector3(limitedVel.x, rigidBody.linearVelocity.y, limitedVel.z);
 		}
 
-		//Handle drag
-
-
 		if (grounded)
 		{
 			rigidBody.linearDamping = groundDrag;
 		}
-
 		else if (!grounded)
 		{
 			rigidBody.linearDamping = 0;
@@ -82,20 +73,16 @@ public class BotRunner : BaseRunner
 		if (IsServerInitialized)
 		{
 			Debug.Log("im on da server!");
-			SetCharacter(CharacterLoader.CreateRandomCharacterData(), "");
+			PickRandomBotCharacter();
 		}
 		else
 		{
-			GetComponent<BotRunner>().enabled = false;
 			GetComponent<RunnerAgent>().enabled = false;
 			GetComponent<DecisionRequester>().enabled = false;
 			GetComponent<BehaviorParameters>().enabled = false;
 		}
 	}
 
-	/// <summary>
-	/// Set the movement of the bot. This method is used to set the movement values for the bot. It receives these values from the ML-Agents training.
-	/// </summary>
 	public void SetMovement(float moveV, float moveH)
 	{
 		if (canMove)
@@ -111,11 +98,11 @@ public class BotRunner : BaseRunner
 		{
 			if (rotation.y < 180)
 			{
-				rotation.y = 90; // Ajustar a 90 si est� entre 90 y 180
+				rotation.y = 90; 
 			}
 			else
 			{
-				rotation.y = 270; // Ajustar a 270 si est� entre 180 y 270
+				rotation.y = 270; 
 			}
 		}
 		return rotation;
