@@ -241,13 +241,14 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: 26bc6035ee3952c4d8386b721b591d4a, type: 3}
+  m_Model: {fileID: 0}
   m_InferenceDevice: 3
-  m_BehaviorType: 2
-  m_BehaviorName: GeneralAgent
+  m_BehaviorType: 0
+  m_BehaviorName: RunnerToGoal
   TeamId: 0
   m_UseChildSensors: 1
   m_UseChildActuators: 1
+  m_DeterministicInference: 0
   m_ObservableAttributeHandling: 0
 --- !u!114 &6366502706986799361
 MonoBehaviour:
@@ -266,7 +267,7 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 70000
   target: {fileID: 0}
-  training: 0
+  training: 1
 --- !u!114 &8406689154444885458
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -280,6 +281,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   DecisionPeriod: 5
+  DecisionStep: 0
   TakeActionsBetweenDecisions: 1
 --- !u!1 &4910267906132348993
 GameObject:
@@ -535,6 +537,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967233
   m_ObservationStacks: 1
+  m_AlternatingRayOrder: 1
+  m_UseBatchedRaycasts: 0
   rayHitColor: {r: 0.10924828, g: 1, b: 0, a: 1}
   rayMissColor: {r: 1, g: 0, b: 0, a: 1}
   m_StartVerticalOffset: 0
@@ -566,6 +570,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967233
   m_ObservationStacks: 1
+  m_AlternatingRayOrder: 1
+  m_UseBatchedRaycasts: 0
   rayHitColor: {r: 0.10980393, g: 1, b: 0, a: 1}
   rayMissColor: {r: 1, g: 0, b: 0, a: 1}
   m_StartVerticalOffset: 0

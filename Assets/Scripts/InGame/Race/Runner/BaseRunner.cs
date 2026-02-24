@@ -61,7 +61,7 @@ public class BaseRunner : NetworkBehaviour
 
 	protected void PickRandomBotCharacter()
 	{
-		if (!IsServerInitialized) return;
+		if (!IsServerInitialized && !RaceManager.isTraining) return;
 
 		if (botPrefabList == null || botPrefabList.Count == 0)
 		{
@@ -69,10 +69,18 @@ public class BaseRunner : NetworkBehaviour
 			return;
 		}
 
-		syncedBotPrefabIndex.Value = UnityEngine.Random.Range(0, botPrefabList.Count);
+		int newIndex = UnityEngine.Random.Range(0, botPrefabList.Count);
+		if (RaceManager.isTraining && !IsServerInitialized)
+		{
+			LocalOnBotPrefabChanged(newIndex);
+		}
+		else
+		{
+			syncedBotPrefabIndex.Value = newIndex;
+		}
 	}
 
-	void OnBotPrefabChanged(int oldIndex, int newIndex, bool asServer)
+	void LocalOnBotPrefabChanged(int newIndex)
 	{
 		if (newIndex < 0 || botPrefabList == null || newIndex >= botPrefabList.Count) return;
 
@@ -84,7 +92,12 @@ public class BaseRunner : NetworkBehaviour
 
 		animator = characterObject.GetComponentInChildren<Animator>();
 		
-		SetNameTag("Bot"); 
+		LocalSetNameTag("Bot"); 
+	}
+
+	void OnBotPrefabChanged(int oldIndex, int newIndex, bool asServer)
+	{
+		LocalOnBotPrefabChanged(newIndex);
 	}
 
 	[ServerRpc]
@@ -96,10 +109,15 @@ public class BaseRunner : NetworkBehaviour
 		SetNameTag(playerName);
 	}
 
+	void LocalSetNameTag(string name)
+	{
+		if (nameTag != null) nameTag.text = name;
+	}
+
 	[ObserversRpc]
 	void SetNameTag(string name)
 	{
-		nameTag.text = name;
+		LocalSetNameTag(name);
 	}
 
 	[ObserversRpc]
@@ -153,9 +171,9 @@ public class BaseRunner : NetworkBehaviour
 		TrailBoostRpc(on);
 	}
 
-	[ObserversRpc]
-	void TrailBoostRpc(bool on)
+	void LocalTrailBoost(bool on)
 	{
+		if (trailBoost == null) return;
 		trailBoost.GetComponent<TrailRenderer>().emitting = on;
 		if (on)
 		{
@@ -165,6 +183,12 @@ public class BaseRunner : NetworkBehaviour
 		{
 			trailBoost.GetComponentInChildren<ParticleSystem>().Stop();
 		}
+	}
+
+	[ObserversRpc]
+	void TrailBoostRpc(bool on)
+	{
+		LocalTrailBoost(on);
 	}
 
 	protected void BaseUpdate()
@@ -196,6 +220,11 @@ public class BaseRunner : NetworkBehaviour
 					SetAnimatorParametersObserversRpc(isRunning, isFalling, speed);
 					TrailBoostRpc(isBoosting);
 				}
+				else if (RaceManager.isTraining)
+				{
+					LocalSetAnimatorParameters(isRunning, isFalling, speed);
+					LocalTrailBoost(isBoosting);
+				}
 				else
 				{
 					SetAnimatorParametersServerRpc(isRunning, isFalling, speed);
@@ -213,8 +242,7 @@ public class BaseRunner : NetworkBehaviour
 		SetAnimatorParametersObserversRpc(running, falling, speed);
 	}
 
-	[ObserversRpc]
-	void SetAnimatorParametersObserversRpc(bool running, bool falling, float speed)
+	void LocalSetAnimatorParameters(bool running, bool falling, float speed)
 	{
 		if (animator == null)
 		{
@@ -227,6 +255,12 @@ public class BaseRunner : NetworkBehaviour
 		animator.SetBool("isRunning", running);
 		animator.SetBool("isFalling", falling);
 		animator.SetFloat("playerSpeed", speed);
+	}
+
+	[ObserversRpc]
+	void SetAnimatorParametersObserversRpc(bool running, bool falling, float speed)
+	{
+		LocalSetAnimatorParameters(running, falling, speed);
 	}
 
 	private void OnTriggerEnter(Collider other)
@@ -244,15 +278,25 @@ public class BaseRunner : NetworkBehaviour
 
 	void GoalReached()
 	{
-		if(!IsOwner)
+		if(!IsOwner && !RaceManager.isTraining)
 			return;
 
-		FreezeServerRpc();
+		if (RaceManager.isTraining && !IsServerInitialized)
+		{
+			LocalFreeze();
+		}
+		else
+		{
+			FreezeServerRpc();
+		}
+
 		rigidBody.detectCollisions = false;
 		rigidBody.isKinematic = true;
 		rigidBody.linearVelocity = Vector3.zero;
 		GetComponent<Collider>().enabled = false;
-		FindFirstObjectByType<GameManager>().GoalReached(id.Value);
+
+		var tm = FindFirstObjectByType<GameManager>();
+		if (tm != null) tm.GoalReached(id.Value);
 	}
 
 	[ServerRpc]
@@ -264,7 +308,12 @@ public class BaseRunner : NetworkBehaviour
 	[ObserversRpc]
 	public void Freeze()
 	{
-		if (!IsOwner)
+		LocalFreeze();
+	}
+
+	public void LocalFreeze()
+	{
+		if (!IsOwner && !RaceManager.isTraining)
 			return;
 		canMove = false;
 		rigidBody.linearVelocity = Vector3.zero;

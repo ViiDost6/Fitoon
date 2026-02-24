@@ -18,7 +18,16 @@ public class RunnerAgent : Agent
     public override void Initialize()
     {
         controller = GetComponent<BotRunner>();
-        target = GameObject.FindWithTag("Goal").transform;
+        
+        GameObject goalObject = GameObject.FindWithTag("Goal");
+        if (goalObject != null)
+        {
+            target = goalObject.transform;
+        }
+        else
+        {
+            Debug.LogWarning("RunnerAgent: No object with tag 'Goal' found in the scene.");
+        }
     }
 
     public override void OnEpisodeBegin()

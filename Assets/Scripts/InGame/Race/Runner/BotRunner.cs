@@ -13,14 +13,24 @@ public class BotRunner : BaseRunner
     float moveV;
     float moveH;
 
+	private void Start()
+	{
+		if (RaceManager.isTraining && !IsServerInitialized)
+		{
+			BaseAwake();
+			PickRandomBotCharacter();
+			canMove = true;
+		}
+	}
+
 	protected override bool HasAnimationAuthority()
 	{
-		return IsServerInitialized;
+		return IsServerInitialized || RaceManager.isTraining;
 	}
 
 	void FixedUpdate()
     {
-		if (!canMove || !IsServerInitialized)
+		if (!canMove || (!IsServerInitialized && !RaceManager.isTraining))
 		{
 			return;
 		}
@@ -41,7 +51,7 @@ public class BotRunner : BaseRunner
 	private void Update()
 	{
 		BaseUpdate();
-		if (!IsServerInitialized || !canMove)
+		if ((!IsServerInitialized && !RaceManager.isTraining) || !canMove)
 		{
 			return;
 		}
@@ -77,9 +87,12 @@ public class BotRunner : BaseRunner
 		}
 		else
 		{
-			GetComponent<RunnerAgent>().enabled = false;
-			GetComponent<DecisionRequester>().enabled = false;
-			GetComponent<BehaviorParameters>().enabled = false;
+			if (!RaceManager.isTraining)
+			{
+				GetComponent<RunnerAgent>().enabled = false;
+				GetComponent<DecisionRequester>().enabled = false;
+				GetComponent<BehaviorParameters>().enabled = false;
+			}
 		}
 	}
 
