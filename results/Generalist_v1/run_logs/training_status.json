@@ -1,0 +1,38 @@
+{
+    "GeneralistBot": {
+        "checkpoints": [
+            {
+                "steps": 499936,
+                "file_path": "results\\Generalist_v1\\GeneralistBot\\GeneralistBot-499936.onnx",
+                "reward": null,
+                "creation_time": 1772110816.8458576,
+                "auxillary_file_paths": [
+                    "results\\Generalist_v1\\GeneralistBot\\GeneralistBot-499936.pt"
+                ]
+            },
+            {
+                "steps": 789376,
+                "file_path": "results\\Generalist_v1\\GeneralistBot\\GeneralistBot-789376.onnx",
+                "reward": null,
+                "creation_time": 1772111059.905546,
+                "auxillary_file_paths": [
+                    "results\\Generalist_v1\\GeneralistBot\\GeneralistBot-789376.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 789376,
+            "file_path": "results\\Generalist_v1\\GeneralistBot.onnx",
+            "reward": null,
+            "creation_time": 1772111059.905546,
+            "auxillary_file_paths": [
+                "results\\Generalist_v1\\GeneralistBot\\GeneralistBot-789376.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.0.1+cpu"
+    }
+}

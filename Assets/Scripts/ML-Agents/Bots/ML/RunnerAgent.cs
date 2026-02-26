@@ -32,11 +32,15 @@ public class RunnerAgent : Agent
 
     public override void OnEpisodeBegin()
     {
-        controller.enabled = true;
-        target.GetComponent<Collider>().enabled = true;
-        backwards = 0f;
+        if (GetComponent<GeneralistAgent>() != null) return;
 
-        lastDiff = (target.transform.localPosition - transform.localPosition) / 20;
+        controller.enabled = true;
+        if (target != null)
+        {
+            target.GetComponent<Collider>().enabled = true;
+            lastDiff = (target.transform.localPosition - transform.localPosition) / 20;
+        }
+        backwards = 0f;
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -83,6 +87,8 @@ public class RunnerAgent : Agent
 
     private void OnTriggerEnter(Collider collider)
     {
+        if (GetComponent<GeneralistAgent>() != null) return;
+
         if (collider.gameObject.CompareTag("Goal"))
         {
             AddReward(500f);

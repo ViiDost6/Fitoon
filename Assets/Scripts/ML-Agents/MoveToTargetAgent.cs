@@ -24,14 +24,19 @@ public class MoveToTargetAgent : Agent
 
     public override void OnEpisodeBegin()
     {
+        if (GetComponent<GeneralistAgent>() != null) return;
+        
         controller.enabled = true;
-        target.GetComponent<Collider>().enabled = true;
+        if (target != null) target.GetComponent<Collider>().enabled = true;
         checkpointsPassedList.Clear();
 
-        lastDiff = (target.transform.localPosition - transform.localPosition) / 20;
-        transform.localRotation = Quaternion.identity;
-        int randSP = Random.Range(0, spawnpointsList.Count - 1);
-        transform.localPosition = new Vector3(spawnpointsList[randSP].transform.localPosition.x, spawnpointsList[randSP].transform.localPosition.y + 1, spawnpointsList[randSP].transform.localPosition.z);
+        if (spawnpointsList != null && spawnpointsList.Count > 0)
+        {
+            lastDiff = (target.transform.localPosition - transform.localPosition) / 20;
+            transform.localRotation = Quaternion.identity;
+            int randSP = Random.Range(0, spawnpointsList.Count);
+            transform.localPosition = new Vector3(spawnpointsList[randSP].transform.localPosition.x, spawnpointsList[randSP].transform.localPosition.y + 1, spawnpointsList[randSP].transform.localPosition.z);
+        }
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -76,6 +81,8 @@ public class MoveToTargetAgent : Agent
 
     private void OnTriggerEnter(Collider collider)
     {
+        if (GetComponent<GeneralistAgent>() != null) return;
+        
         if (collider.gameObject.name == target.name)
         {
             AddReward(1000f);

@@ -1,0 +1,16 @@
+behaviors:
+  GeneralistBot:
+    trainer_type: ppo
+    max_steps: 1000000
+    hyperparameters:
+      batch_size: 1024
+      buffer_size: 10240
+      learning_rate: 3.0e-4
+    network_settings:
+      normalize: false
+      hidden_units: 128
+      num_layers: 2
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0

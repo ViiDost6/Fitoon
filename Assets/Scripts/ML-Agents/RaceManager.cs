@@ -18,28 +18,23 @@ public class RaceManager : MonoBehaviour
     {
         if (botPrefab == null)
         {
-            Debug.LogWarning("RaceManager: Missing botPrefab.");
             return;
         }
 
-        Transform[] allTransforms = FindObjectsOfType<Transform>();
+        // Search for spawn points within the parent object's hierarchy using the "SpawnPoint" tag
+        Transform searchRoot = transform.parent != null ? transform.parent : transform;
         List<Transform> foundSpawnPoints = new List<Transform>();
         
-        foreach (Transform t in allTransforms)
+        foreach (Transform t in searchRoot.GetComponentsInChildren<Transform>(true))
         {
-            if (t.gameObject.name == "SP" || t.gameObject.name.StartsWith("SP ("))
+            if (t.CompareTag("SpawnPoint"))
             {
-                // Only add if it doesn't have children (the parent container has children)
-                if (t.childCount == 0)
-                {
-                    foundSpawnPoints.Add(t);
-                }
+                foundSpawnPoints.Add(t);
             }
         }
 
         if (foundSpawnPoints.Count == 0)
         {
-            Debug.LogWarning("RaceManager: No spawn points found with name 'SP'.");
             return;
         }
 

@@ -20,8 +20,9 @@ public class BaseRunner : NetworkBehaviour
 	[SerializeField] protected GameObject trailBoost;
 	[SerializeField] protected LayerMask whatIsGround;
 	[SerializeField] protected float runnerHeight = 2;
-	[SerializeField] TextMeshPro nameTag;
+	TextMeshPro nameTag;
 	Coroutine animatorCoroutine;
+    protected Collider runnerCollider;
 
 	public readonly SyncVar<int> id = new SyncVar<int>(-1);
 
@@ -39,6 +40,7 @@ public class BaseRunner : NetworkBehaviour
 	private void Awake()
 	{
 		rigidBody = GetComponent<Rigidbody>();
+        runnerCollider = GetComponent<Collider>();
 		rigidBody.detectCollisions = true;
 
 		syncedBotPrefabIndex.OnChange += OnBotPrefabChanged;
@@ -62,12 +64,7 @@ public class BaseRunner : NetworkBehaviour
 	protected void PickRandomBotCharacter()
 	{
 		if (!IsServerInitialized && !RaceManager.isTraining) return;
-
-		if (botPrefabList == null || botPrefabList.Count == 0)
-		{
-			Debug.LogError("Bot Prefab List is empty! Please assign prefabs in the Inspector.");
-			return;
-		}
+		if (botPrefabList == null || botPrefabList.Count == 0) return;
 
 		int newIndex = UnityEngine.Random.Range(0, botPrefabList.Count);
 		if (RaceManager.isTraining && !IsServerInitialized)
@@ -103,7 +100,6 @@ public class BaseRunner : NetworkBehaviour
 	[ServerRpc]
 	protected void SetCharacter(CharacterData characterData, string playerName)
 	{
-		Debug.Log("[CHARLOAD] Server" + characterData.hairColor + " " + characterData.skinColor + " " + characterData.topColor + " " + characterData.bottomColor);
 
 		LoadCharacter(characterData);
 		SetNameTag(playerName);
@@ -123,13 +119,10 @@ public class BaseRunner : NetworkBehaviour
 	[ObserversRpc]
 	void LoadCharacter(CharacterData characterData)
 	{
-		Debug.Log("Loading: " + characterData.characterName);
-		Debug.Log("[CHARLOAD] Observers" + characterData.hairColor + " " + characterData.skinColor + " " + characterData.topColor + " " + characterData.bottomColor);
 		Character character = CharacterLoader.GetCharacter(characterData);
 
 		if (character.prefab == null)
 		{
-			Debug.LogError("Character Data is Null");
 			return;
 		}
 
@@ -152,7 +145,6 @@ public class BaseRunner : NetworkBehaviour
 			children.Add(gameObject.transform.GetChild(i).gameObject);
 			children.Concat(GetAllChildrenRecursive(gameObject.transform.GetChild(i).gameObject));
 		}
-		Debug.Log(children);
 		return children;
 	}
 
@@ -232,7 +224,7 @@ public class BaseRunner : NetworkBehaviour
 				}
 			}
 			
-			yield return new WaitForSeconds(0.5f);
+			yield return new WaitForSeconds(0.1f);
 		}
 	}
 
@@ -290,48 +282,91 @@ public class BaseRunner : NetworkBehaviour
 			FreezeServerRpc();
 		}
 
-		rigidBody.detectCollisions = false;
+		if (!rigidBody.isKinematic) rigidBody.linearVelocity = Vector3.zero;
 		rigidBody.isKinematic = true;
-		rigidBody.linearVelocity = Vector3.zero;
+		rigidBody.detectCollisions = false;
 		GetComponent<Collider>().enabled = false;
 
 		var tm = FindFirstObjectByType<GameManager>();
-		if (tm != null) tm.GoalReached(id.Value);
+		if (tm != null && !RaceManager.isTraining) tm.GoalReached(id.Value);
 	}
 
 	[ServerRpc]
 	void FreezeServerRpc()
 	{
-		Freeze();
+		ObserversFreeze();
 	}
 
 	[ObserversRpc]
-	public void Freeze()
+	private void ObserversFreeze()
 	{
 		LocalFreeze();
 	}
 
+	public void Freeze()
+	{
+		if (RaceManager.isTraining)
+		{
+			LocalFreeze();
+		}
+		else if (IsServerInitialized)
+		{
+			ObserversFreeze();
+		}
+		else
+		{
+			FreezeServerRpc();
+		}
+	}
+
 	public void LocalFreeze()
 	{
-		if (!IsOwner && !RaceManager.isTraining)
+		if (!IsOwner && !RaceManager.isTraining && !IsServerInitialized)
 			return;
 		canMove = false;
-		rigidBody.linearVelocity = Vector3.zero;
+		if (rigidBody != null && !rigidBody.isKinematic) rigidBody.linearVelocity = Vector3.zero;
 	}
 
 	[ObserversRpc(ExcludeServer = false, ExcludeOwner = false)]
+	private void ObserversUnFreeze()
+	{
+		LocalUnFreeze();
+	}
+
 	public void UnFreeze()
 	{
-		if (!IsOwner)
+		if (RaceManager.isTraining)
+		{
+			LocalUnFreeze();
+		}
+		else if (IsServerInitialized)
+		{
+			ObserversUnFreeze();
+		}
+	}
+
+	public void LocalUnFreeze()
+	{
+		if (!IsOwner && !RaceManager.isTraining && !IsServerInitialized)
 			return;
-		Debug.Log("I'm Unfreezing");
+			
+		// Debug.Log("Local Unfreezing: " + gameObject.name);
 		canMove = true;
+		
+		if (rigidBody != null)
+		{
+			// Restore physics and collisions
+			rigidBody.detectCollisions = true;
+			rigidBody.isKinematic = false;
+		}
+		
+		if (runnerCollider != null) runnerCollider.enabled = true;
 	}
 
 	public void SetId(int i)
 	{
 		id.Value = i;
-		id.DirtyAll();
+		if (IsServerInitialized) id.DirtyAll();
 	}
 
 	public int GetId()

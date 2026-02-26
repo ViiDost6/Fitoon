@@ -23,10 +23,12 @@ public class MoveToTargetPlay : Agent
 
     public override void OnEpisodeBegin()
     {
+        if (GetComponent<GeneralistAgent>() != null) return;
+
         checkpointsPassedList.Clear();
 
         transform.localRotation = Quaternion.identity;
-        if(spawnpoint != null) transform.localPosition = new Vector3(spawnpoint.x, spawnpoint.y + 1, spawnpoint.z);
+        if (spawnpoint != null) transform.localPosition = new Vector3(spawnpoint.x, spawnpoint.y + 1, spawnpoint.z);
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -65,6 +67,8 @@ public class MoveToTargetPlay : Agent
 
     private void OnTriggerEnter(Collider collider)
     {
+        if (GetComponent<GeneralistAgent>() != null) return;
+
         if (collider.gameObject.name == target.name)
         {
             AddReward(1000f);

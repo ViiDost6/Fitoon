@@ -30,59 +30,83 @@ public class BotRunner : BaseRunner
 
 	void FixedUpdate()
     {
-		if (!canMove || (!IsServerInitialized && !RaceManager.isTraining))
+		if (!canMove || (!IsServerInitialized && !RaceManager.isTraining) || rigidBody == null)
 		{
 			return;
 		}
 
-		rigidBody.AddForce(transform.forward * baseSpeed * 10f, ForceMode.Force);
+		HandleLocomotion();
+		HandleEnvironment();
 
-		Vector3 rotation = new Vector3(0, moveH * rotationSpeed, 0);
-		Vector3 currentRotation = transform.rotation.eulerAngles;
-		Vector3 limitedRotation = RotationLimited(currentRotation);
-		rigidBody.MoveRotation(Quaternion.Euler(limitedRotation + rotation));
-
-		Vector3 moveDirection = transform.forward * moveV + transform.right * moveH;
-		if (moveV != 0) rigidBody.AddForce(moveDirection.normalized * baseSpeed * 10f * Mathf.Max(0.1f, speedMultiplier), ForceMode.Force);
-		
 		BaseFixedUpdate();
 	}
 
-	private void Update()
-	{
-		BaseUpdate();
-		if ((!IsServerInitialized && !RaceManager.isTraining) || !canMove)
-		{
-			return;
-		}
+    private void HandleLocomotion()
+    {
+        // 1. Rotation (Lowered to 120 deg/sec with tiny deadzone to prevent zig-zag)
+        if (Mathf.Abs(moveH) > 0.05f) 
+        {
+            float step = moveH * 120f * Time.fixedDeltaTime; 
+            transform.Rotate(Vector3.up, step);
 
-		RaycastHit hit;
-		bool grounded = Physics.Raycast(transform.position, Vector3.down, out hit, 2 * 0.5f + 3f, whatIsGround);
+            // ROTATION LOCK: Constraint to 90 degrees left/right from spawn
+            var agent = GetComponent<GeneralistAgent>();
+            if (agent != null && agent.spawnPositionCaptured)
+            {
+                float angle = Vector3.SignedAngle(agent.spawnRotation * Vector3.forward, transform.forward, Vector3.up);
+                if (Mathf.Abs(angle) > 90f)
+                {
+                    float clampedAngle = Mathf.Sign(angle) * 90f;
+                    transform.rotation = Quaternion.Euler(0, agent.spawnRotation.eulerAngles.y + clampedAngle, 0);
+                    rigidBody.angularVelocity = Vector3.zero;
+                }
+            }
+        }
 
-		Vector3 flatVel = new Vector3(rigidBody.linearVelocity.x, 0f, rigidBody.linearVelocity.z);
+        // 2. Direct velocity control (Matching PlayerController style)
+        Vector3 moveInput = transform.forward * baseSpeed * Mathf.Max(0.05f, speedMultiplier) * moveV;
 
-		if (flatVel.magnitude > baseSpeed)
-		{
-			Vector3 limitedVel = flatVel.normalized * baseSpeed;
-			rigidBody.linearVelocity = new Vector3(limitedVel.x, rigidBody.linearVelocity.y, limitedVel.z);
-		}
+        if (!rigidBody.isKinematic)
+        {
+            Vector3 vel = rigidBody.linearVelocity;
+            rigidBody.linearVelocity = new Vector3(moveInput.x, vel.y, moveInput.z);
+        }
+    }
 
-		if (grounded)
-		{
-			rigidBody.linearDamping = groundDrag;
-		}
-		else if (!grounded)
-		{
-			rigidBody.linearDamping = 0;
-		}
-	}
+    private void HandleEnvironment()
+    {
+        // Ground checking and Y-snapping (Copied precisely from PlayerController)
+        float rayLength = runnerHeight * 0.5f + 0.4f; 
+        
+        if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, rayLength, whatIsGround))
+        {
+            if (rigidBody.linearDamping != groundDrag) rigidBody.linearDamping = groundDrag;
+
+            // CORRECCIÓN ANTI-JITTER:
+            float targetY = hit.point.y + (runnerHeight * 0.5f) + 0.01f;
+            if (Mathf.Abs(transform.position.y - targetY) > 0.005f) 
+            {
+                float smoothY = Mathf.MoveTowards(transform.position.y, targetY, Time.fixedDeltaTime * 5f);
+                transform.position = new Vector3(transform.position.x, smoothY, transform.position.z);
+            }
+        }
+        else
+        {
+            if (rigidBody.linearDamping != 0) rigidBody.linearDamping = 0;
+        }
+    }
+
+    // Update is only for visuals, we can keep it for server/non-training but skip logic
+    private void Update()
+    {
+        BaseUpdate();
+    }
 
 	public override void OnStartNetwork()
 	{
 		BaseAwake();
 		if (IsServerInitialized)
 		{
-			Debug.Log("im on da server!");
 			PickRandomBotCharacter();
 		}
 		else
@@ -105,19 +129,4 @@ public class BotRunner : BaseRunner
 		}
 	}
 
-	private Vector3 RotationLimited(Vector3 rotation)
-	{
-		if (rotation.y > 90 && rotation.y < 270)
-		{
-			if (rotation.y < 180)
-			{
-				rotation.y = 90; 
-			}
-			else
-			{
-				rotation.y = 270; 
-			}
-		}
-		return rotation;
-	}
 }

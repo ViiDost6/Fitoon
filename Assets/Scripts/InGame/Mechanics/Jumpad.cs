@@ -19,13 +19,15 @@ public class Jumpad : MonoBehaviour
     {
         Rigidbody playerRigidbody = other.GetComponent<Rigidbody>();
         if (playerRigidbody != null) {
-
             Vector3 playerPosition = other.transform.position;
             Vector3 directionToPlayer = new Vector3(playerPosition.x - transform.position.x, 0, playerPosition.z - transform.position.z);
             //directionToPlayer.Normalize();
 
-            playerRigidbody.linearVelocity = Vector3.zero;
-            playerRigidbody.angularVelocity = Vector3.zero;
+            if (!playerRigidbody.isKinematic)
+            {
+                playerRigidbody.linearVelocity = Vector3.zero;
+                playerRigidbody.angularVelocity = Vector3.zero;
+            }
 
             Vector3 jumpDirection;
 

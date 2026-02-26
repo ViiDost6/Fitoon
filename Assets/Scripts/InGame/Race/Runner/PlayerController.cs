@@ -87,8 +87,11 @@ public class PlayerController : BaseRunner
         moveInput = transform.forward * baseSpeed * Mathf.Max(0.05f, speedMultiplier);
 #endif
 
-        Vector3 vel = _rb.linearVelocity;
-        _rb.linearVelocity = new Vector3(moveInput.x, vel.y, moveInput.z);
+        if (_rb != null && !_rb.isKinematic)
+        {
+            Vector3 vel = _rb.linearVelocity;
+            _rb.linearVelocity = new Vector3(moveInput.x, vel.y, moveInput.z);
+        }
     }
 
     private void HandleEnvironment()
