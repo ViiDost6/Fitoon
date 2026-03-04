@@ -37,11 +37,11 @@ public class BaseRunner : NetworkBehaviour
 
 	public readonly SyncVar<int> syncedBotPrefabIndex = new SyncVar<int>(-1);
 
-	private void Awake()
+	protected virtual void Awake()
 	{
 		rigidBody = GetComponent<Rigidbody>();
         runnerCollider = GetComponent<Collider>();
-		rigidBody.detectCollisions = true;
+		if (rigidBody != null) rigidBody.detectCollisions = true;
 
 		syncedBotPrefabIndex.OnChange += OnBotPrefabChanged;
 	}
@@ -132,6 +132,9 @@ public class BaseRunner : NetworkBehaviour
 		characterObject = Instantiate(character.prefab, transform.position - Vector3.up, Quaternion.identity, transform);
 
 		characterObject.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+		animator = characterObject.GetComponentInChildren<Animator>();
+		if (animator != null) animator.applyRootMotion = false;
 
 		characterObject.GetComponent<CharacterPrefabColorChanger>().ChangeColors(character.hairColor, character.skinColor, character.topColor, character.bottomColor);
 		characterObject.GetComponent<CharacterPrefabColorChanger>().ChangeShoe(ShoeLoader.GetMesh(character.shoes.itemID), ShoeLoader.getMaterials(character.shoes.materials));
@@ -268,6 +271,15 @@ public class BaseRunner : NetworkBehaviour
 		}
 	}
 
+	private void Start()
+	{
+		if ((RaceManager.isTraining || Application.isEditor) && !IsServerInitialized)
+		{
+			BaseAwake();
+			PickRandomBotCharacter();
+			canMove = true;
+		}
+	}
 	void GoalReached()
 	{
 		if(!IsOwner && !RaceManager.isTraining)
@@ -305,7 +317,7 @@ public class BaseRunner : NetworkBehaviour
 
 	public void Freeze()
 	{
-		if (RaceManager.isTraining)
+		if (RaceManager.isTraining || Application.isEditor)
 		{
 			LocalFreeze();
 		}
@@ -321,7 +333,7 @@ public class BaseRunner : NetworkBehaviour
 
 	public void LocalFreeze()
 	{
-		if (!IsOwner && !RaceManager.isTraining && !IsServerInitialized)
+		if (!IsOwner && !RaceManager.isTraining && !IsServerInitialized && !Application.isEditor)
 			return;
 		canMove = false;
 		if (rigidBody != null && !rigidBody.isKinematic) rigidBody.linearVelocity = Vector3.zero;
@@ -335,7 +347,7 @@ public class BaseRunner : NetworkBehaviour
 
 	public void UnFreeze()
 	{
-		if (RaceManager.isTraining)
+		if (RaceManager.isTraining || Application.isEditor)
 		{
 			LocalUnFreeze();
 		}
@@ -347,7 +359,7 @@ public class BaseRunner : NetworkBehaviour
 
 	public void LocalUnFreeze()
 	{
-		if (!IsOwner && !RaceManager.isTraining && !IsServerInitialized)
+		if (!IsOwner && !RaceManager.isTraining && !IsServerInitialized && !Application.isEditor)
 			return;
 			
 		// Debug.Log("Local Unfreezing: " + gameObject.name);

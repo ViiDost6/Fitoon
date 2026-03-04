@@ -13,14 +13,30 @@ public class BotRunner : BaseRunner
     float moveV;
     float moveH;
 
-	private void Start()
+	protected override void Awake()
 	{
-		if (RaceManager.isTraining && !IsServerInitialized)
+		base.Awake(); // Llamamos al base para asignar el Rigidbody
+		
+		// Inicialización forzada para Editor/Heurística
+		if (Application.isEditor || RaceManager.isTraining)
 		{
 			BaseAwake();
 			PickRandomBotCharacter();
 			canMove = true;
+			if (rigidBody != null) 
+			{
+				rigidBody.isKinematic = false;
+				rigidBody.useGravity = true;
+				rigidBody.interpolation = RigidbodyInterpolation.Interpolate;
+				rigidBody.collisionDetectionMode = CollisionDetectionMode.Continuous;
+			}
 		}
+	}
+
+	private void Start() 
+	{
+		// Los bots necesitan canMove activo fuera de red para la heurística
+		if (Application.isEditor) canMove = true;
 	}
 
 	protected override bool HasAnimationAuthority()
@@ -30,7 +46,9 @@ public class BotRunner : BaseRunner
 
 	void FixedUpdate()
     {
-		if (!canMove || (!IsServerInitialized && !RaceManager.isTraining) || rigidBody == null)
+		// Allow movement in Editor for manual testing and heuristic debugging
+		bool isEditor = Application.isEditor;
+		if (!canMove || (!IsServerInitialized && !RaceManager.isTraining && !isEditor) || rigidBody == null)
 		{
 			return;
 		}
@@ -41,62 +59,104 @@ public class BotRunner : BaseRunner
 		BaseFixedUpdate();
 	}
 
+    private Vector3 groundNormal = Vector3.up;
+    private bool isGrounded = false;
+
     private void HandleLocomotion()
     {
-        // 1. Rotation (Lowered to 120 deg/sec with tiny deadzone to prevent zig-zag)
+        // 1. Rotation (Continuous and fluid like the player)
         if (Mathf.Abs(moveH) > 0.05f) 
         {
-            float step = moveH * 120f * Time.fixedDeltaTime; 
-            transform.Rotate(Vector3.up, step);
+            // Clear angular velocity to prevent physics fighting with our manual rotation
+            rigidBody.angularVelocity = Vector3.zero;
 
-            // ROTATION LOCK: Constraint to 90 degrees left/right from spawn
-            var agent = GetComponent<GeneralistAgent>();
-            if (agent != null && agent.spawnPositionCaptured)
+            float rotStep = moveH * rotationSpeed * 140f * Time.fixedDeltaTime; 
+            transform.Rotate(Vector3.up, rotStep);
+
+            // ROTATION LOCK (Preserving slope alignment)
+            var runAgent = GetComponent<RunnerAgent>();
+            if (runAgent != null && runAgent.spawnPositionCaptured)
             {
-                float angle = Vector3.SignedAngle(agent.spawnRotation * Vector3.forward, transform.forward, Vector3.up);
-                if (Mathf.Abs(angle) > 90f)
+                Vector3 spawnFwd = runAgent.spawnRotation * Vector3.forward;
+                float angle = Vector3.SignedAngle(spawnFwd, transform.forward, Vector3.up);
+                if (Mathf.Abs(angle) > 95f) 
                 {
-                    float clampedAngle = Mathf.Sign(angle) * 90f;
-                    transform.rotation = Quaternion.Euler(0, agent.spawnRotation.eulerAngles.y + clampedAngle, 0);
-                    rigidBody.angularVelocity = Vector3.zero;
+                    float clampedY = runAgent.spawnRotation.eulerAngles.y + (Mathf.Sign(angle) * 95f);
+                    // Keep current X and Z (slope tilt) but lock Y
+                    transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, clampedY, transform.rotation.eulerAngles.z);
                 }
             }
         }
 
-        // 2. Direct velocity control (Matching PlayerController style)
-        Vector3 moveInput = transform.forward * baseSpeed * Mathf.Max(0.05f, speedMultiplier) * moveV;
+        // 2. Movement (SURFACE PROJECTED VELOCITY)
+        float effectiveSpeed = baseSpeed > 0 ? baseSpeed : 10f; 
+        Vector3 moveDirection = transform.forward * moveV;
+        
+        // If we are on a curve/slope, project our direction onto the surface plane
+        if (isGrounded)
+        {
+            moveDirection = Vector3.ProjectOnPlane(moveDirection, groundNormal).normalized * moveV;
+        }
+
+        Vector3 targetVelocity = moveDirection * effectiveSpeed * Mathf.Max(0.05f, speedMultiplier);
 
         if (!rigidBody.isKinematic)
         {
-            Vector3 vel = rigidBody.linearVelocity;
-            rigidBody.linearVelocity = new Vector3(moveInput.x, vel.y, moveInput.z);
+            Vector3 currentVel = rigidBody.linearVelocity;
+            
+            if (moveV > 0.05f || Mathf.Abs(moveH) > 0.05f)
+            {
+                // ForceMode.VelocityChange is fast and avoids build-up of vertical errors on curves
+                Vector3 velocityChange = (targetVelocity - currentVel);
+                
+                // On flat ground, we don't want to mess much with existing falling velocity
+                if (groundNormal.y > 0.95f)
+                {
+                    velocityChange.y = 0; 
+                }
+
+                rigidBody.AddForce(velocityChange, ForceMode.VelocityChange);
+            }
+            else
+            {
+                // Slow down if no input
+                rigidBody.linearVelocity = new Vector3(currentVel.x * 0.9f, currentVel.y, currentVel.z * 0.9f);
+            }
         }
     }
 
     private void HandleEnvironment()
     {
-        // Ground checking and Y-snapping (Copied precisely from PlayerController)
-        float rayLength = runnerHeight * 0.5f + 0.4f; 
+        Vector3 rayOrigin = transform.position + Vector3.up * runnerHeight;
+        float adjustedRayLength = runnerHeight + 0.6f; 
         
-        if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, rayLength, whatIsGround))
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, adjustedRayLength, whatIsGround))
         {
+            isGrounded = true;
+            groundNormal = hit.normal;
+            
             if (rigidBody.linearDamping != groundDrag) rigidBody.linearDamping = groundDrag;
 
-            // CORRECCIÓN ANTI-JITTER:
-            float targetY = hit.point.y + (runnerHeight * 0.5f) + 0.01f;
-            if (Mathf.Abs(transform.position.y - targetY) > 0.005f) 
+            // ANTI-JITTER: Only on mostly flat surfaces. On cylinders, let physics handle it.
+            if (groundNormal.y > 0.95f)
             {
-                float smoothY = Mathf.MoveTowards(transform.position.y, targetY, Time.fixedDeltaTime * 5f);
-                transform.position = new Vector3(transform.position.x, smoothY, transform.position.z);
+                float targetY = hit.point.y + (runnerHeight * 0.5f) + 0.05f;
+                if (Mathf.Abs(transform.position.y - targetY) > 0.005f) 
+                {
+                    float smoothY = Mathf.MoveTowards(transform.position.y, targetY, Time.fixedDeltaTime * 10f);
+                    transform.position = new Vector3(transform.position.x, smoothY, transform.position.z);
+                    Physics.SyncTransforms(); 
+                }
             }
         }
         else
         {
+            isGrounded = false;
+            groundNormal = Vector3.up;
             if (rigidBody.linearDamping != 0) rigidBody.linearDamping = 0;
         }
     }
 
-    // Update is only for visuals, we can keep it for server/non-training but skip logic
     private void Update()
     {
         BaseUpdate();
@@ -111,11 +171,16 @@ public class BotRunner : BaseRunner
 		}
 		else
 		{
-			if (!RaceManager.isTraining)
+			if (!RaceManager.isTraining && !Application.isEditor)
 			{
-				GetComponent<RunnerAgent>().enabled = false;
-				GetComponent<DecisionRequester>().enabled = false;
-				GetComponent<BehaviorParameters>().enabled = false;
+				var rAgent = GetComponent<RunnerAgent>();
+				if (rAgent != null) rAgent.enabled = false;
+				
+				var dReq = GetComponent<DecisionRequester>();
+				if (dReq != null) dReq.enabled = false;
+				
+				var bParam = GetComponent<BehaviorParameters>();
+				if (bParam != null) bParam.enabled = false;
 			}
 		}
 	}
@@ -126,7 +191,7 @@ public class BotRunner : BaseRunner
 		{
 			this.moveV = moveV;
 			this.moveH = moveH;
+			if (rigidBody != null && rigidBody.IsSleeping()) rigidBody.WakeUp();
 		}
 	}
-
 }

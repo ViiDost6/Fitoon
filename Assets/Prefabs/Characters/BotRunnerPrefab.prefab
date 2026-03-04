@@ -16,7 +16,8 @@ GameObject:
   - component: {fileID: 5121624497494317173}
   - component: {fileID: 2894959501106145056}
   - component: {fileID: 8406689154444885458}
-  - component: {fileID: -5303698901587705123}
+  - component: {fileID: 8184351165326348791}
+  - component: {fileID: -5592726884802945057}
   m_Layer: 0
   m_Name: BotRunnerPrefab
   m_TagString: Player
@@ -57,7 +58,7 @@ MonoBehaviour:
   _componentIndexCache: 0
   _addedNetworkObject: {fileID: 4220177162550495737}
   _networkObjectCache: {fileID: 4220177162550495737}
-  baseSpeed: 7
+  baseSpeed: 14
   rotationSpeed: 1
   groundDrag: 5
   trailBoost: {fileID: 5239460420796949810}
@@ -65,7 +66,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   runnerHeight: 2
-  canMove: 0
+  canMove: 1
   botPrefabList:
   - {fileID: 1701343700689534218, guid: 12215f1dc0b230a439907169291eacb2, type: 3}
   - {fileID: 575796233090883486, guid: 919ff7ff0dc879f4b9427480db66be01, type: 3}
@@ -79,7 +80,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3812855208846561209}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
   m_Name: 
@@ -182,7 +183,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3812855208846561209}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a2836e36774ca1c4bbbee976e17b649c, type: 3}
   m_Name: 
@@ -243,7 +244,7 @@ MonoBehaviour:
   m_Model: {fileID: 0}
   m_InferenceDevice: 3
   m_BehaviorType: 0
-  m_BehaviorName: GeneralistBot
+  m_BehaviorName: Runner
   TeamId: 0
   m_UseChildSensors: 1
   m_UseChildActuators: 1
@@ -264,7 +265,7 @@ MonoBehaviour:
   DecisionPeriod: 5
   DecisionStep: 0
   TakeActionsBetweenDecisions: 1
---- !u!114 &-5303698901587705123
+--- !u!114 &8184351165326348791
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -273,25 +274,32 @@ MonoBehaviour:
   m_GameObject: {fileID: 3812855208846561209}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 833477f7050eda4479a4d5285ff242c2, type: 3}
+  m_Script: {fileID: 11500000, guid: f2902496c0120472b90269f94a0aec7e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GeneralistAgent
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Demonstrations.DemonstrationRecorder
+  Record: 0
+  NumStepsToRecord: 0
+  DemonstrationName: Dizzy
+  DemonstrationDirectory: Assets/Demonstrations
+--- !u!114 &-5592726884802945057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3812855208846561209}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3d11cbb5ef96d141a3c75a7011004ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RunnerAgent
   agentParameters:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
-  MaxStep: 70000
-  moveSpeed: 5
-  turnSpeed: 180
-  difficultyLevel: 0
-  brain:
-    weightsInputToHidden: []
-    weightsHiddenToOutput: []
-    biasHidden: []
-    biasOutput: []
-    inputSize: 0
-    hiddenSize: 0
-    outputSize: 0
-  useEvolutionBrain: 0
+  MaxStep: 1000000
+  target: {fileID: 0}
+  training: 1
+  debugLogs: 0
 --- !u!1 &4910267906132348993
 GameObject:
   m_ObjectHideFlags: 0

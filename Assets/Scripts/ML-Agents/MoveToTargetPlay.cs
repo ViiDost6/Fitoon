@@ -23,8 +23,6 @@ public class MoveToTargetPlay : Agent
 
     public override void OnEpisodeBegin()
     {
-        if (GetComponent<GeneralistAgent>() != null) return;
-
         checkpointsPassedList.Clear();
 
         transform.localRotation = Quaternion.identity;
@@ -67,8 +65,6 @@ public class MoveToTargetPlay : Agent
 
     private void OnTriggerEnter(Collider collider)
     {
-        if (GetComponent<GeneralistAgent>() != null) return;
-
         if (collider.gameObject.name == target.name)
         {
             AddReward(1000f);

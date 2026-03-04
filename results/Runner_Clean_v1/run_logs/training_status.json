@@ -1,0 +1,47 @@
+{
+    "Runner": {
+        "checkpoints": [
+            {
+                "steps": 499981,
+                "file_path": "results\\Runner_Clean_v1\\Runner\\Runner-499981.onnx",
+                "reward": 2015.9700253214687,
+                "creation_time": 1772629280.4161613,
+                "auxillary_file_paths": [
+                    "results\\Runner_Clean_v1\\Runner\\Runner-499981.pt"
+                ]
+            },
+            {
+                "steps": 999933,
+                "file_path": "results\\Runner_Clean_v1\\Runner\\Runner-999933.onnx",
+                "reward": 2014.0193662457168,
+                "creation_time": 1772629715.4143548,
+                "auxillary_file_paths": [
+                    "results\\Runner_Clean_v1\\Runner\\Runner-999933.pt"
+                ]
+            },
+            {
+                "steps": 1089966,
+                "file_path": "results\\Runner_Clean_v1\\Runner\\Runner-1089966.onnx",
+                "reward": null,
+                "creation_time": 1772629796.192156,
+                "auxillary_file_paths": [
+                    "results\\Runner_Clean_v1\\Runner\\Runner-1089966.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 1089966,
+            "file_path": "results\\Runner_Clean_v1\\Runner.onnx",
+            "reward": null,
+            "creation_time": 1772629796.192156,
+            "auxillary_file_paths": [
+                "results\\Runner_Clean_v1\\Runner\\Runner-1089966.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.0.1+cpu"
+    }
+}

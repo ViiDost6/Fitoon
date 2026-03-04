@@ -6,16 +6,19 @@ public class RaceManager : MonoBehaviour
     public static bool isTraining = true;
 
     [SerializeField] private GameObject botPrefab;
+    [SerializeField] private int botCount = 1;
 
     private List<GameObject> spawnedBots = new List<GameObject>();
 
     void Start()
     {
+        Debug.Log("[RaceManager] Start called.");
         SpawnBots();
     }
 
     void SpawnBots()
     {
+        Debug.Log($"[RaceManager] SpawnBots called. botPrefab is {(botPrefab != null ? botPrefab.name : "NULL")}");
         if (botPrefab == null)
         {
             return;
@@ -33,14 +36,20 @@ public class RaceManager : MonoBehaviour
             }
         }
 
+        Debug.Log($"[RaceManager] Found {foundSpawnPoints.Count} spawn points.");
         if (foundSpawnPoints.Count == 0)
         {
             return;
         }
 
-        for (int i = 0; i < foundSpawnPoints.Count; i++)
+        Debug.Log($"[RaceManager] Spawning {botCount} bots.");
+        for (int i = 0; i < botCount; i++)
         {
-            GameObject bot = Instantiate(botPrefab, foundSpawnPoints[i].position, foundSpawnPoints[i].rotation, transform);
+            // Use modulo to cycle through spawn points if botCount > foundSpawnPoints.Count
+            Transform spawnPoint = foundSpawnPoints[i % foundSpawnPoints.Count];
+            
+            GameObject bot = Instantiate(botPrefab, spawnPoint.position, spawnPoint.rotation, transform);
+            Debug.Log($"[RaceManager] Instantiated {bot.name} at {spawnPoint.position}");
             
             // Deactivate the FishNet component as requested to prevent it from interfering locally
             if (bot.TryGetComponent<FishNet.Object.NetworkObject>(out var networkObject))
