@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class RaceManager : MonoBehaviour
@@ -7,64 +8,78 @@ public class RaceManager : MonoBehaviour
 
     [SerializeField] private GameObject botPrefab;
     [SerializeField] private int botCount = 1;
+    [SerializeField] private float spawnHeightOffset = 0.5f; // Elevación mínima para no chocar con el suelo
 
     private List<GameObject> spawnedBots = new List<GameObject>();
+    private List<Transform> foundSpawnPoints = new List<Transform>();
 
     void Start()
     {
-        Debug.Log("[RaceManager] Start called.");
+        FindAllSpawnPointsInScene(); 
         SpawnBots();
+    }
+
+    public void FindAllSpawnPointsInScene()
+    {
+        foundSpawnPoints.Clear();
+        GameObject[] spawnObjects = GameObject.FindGameObjectsWithTag("SpawnPoint");
+
+        foreach (GameObject go in spawnObjects)
+        {
+            foundSpawnPoints.Add(go.transform);
+        }
+
+        if (foundSpawnPoints.Count == 0)
+            Debug.LogError("[RaceManager] No hay objetos con el tag 'SpawnPoint' en la escena.");
     }
 
     void SpawnBots()
     {
-        Debug.Log($"[RaceManager] SpawnBots called. botPrefab is {(botPrefab != null ? botPrefab.name : "NULL")}");
-        if (botPrefab == null)
-        {
-            return;
-        }
+        if (botPrefab == null || foundSpawnPoints.Count == 0) return;
 
-        // Search for spawn points within the parent object's hierarchy using the "SpawnPoint" tag
-        Transform searchRoot = transform.parent != null ? transform.parent : transform;
-        List<Transform> foundSpawnPoints = new List<Transform>();
-        
-        foreach (Transform t in searchRoot.GetComponentsInChildren<Transform>(true))
-        {
-            if (t.CompareTag("SpawnPoint"))
-            {
-                foundSpawnPoints.Add(t);
-            }
-        }
-
-        Debug.Log($"[RaceManager] Found {foundSpawnPoints.Count} spawn points.");
-        if (foundSpawnPoints.Count == 0)
-        {
-            return;
-        }
-
-        Debug.Log($"[RaceManager] Spawning {botCount} bots.");
         for (int i = 0; i < botCount; i++)
         {
-            // Use modulo to cycle through spawn points if botCount > foundSpawnPoints.Count
-            Transform spawnPoint = foundSpawnPoints[i % foundSpawnPoints.Count];
-            
-            GameObject bot = Instantiate(botPrefab, spawnPoint.position, spawnPoint.rotation, transform);
-            Debug.Log($"[RaceManager] Instantiated {bot.name} at {spawnPoint.position}");
-            
-            // Deactivate the FishNet component as requested to prevent it from interfering locally
-            if (bot.TryGetComponent<FishNet.Object.NetworkObject>(out var networkObject))
-            {
-                networkObject.enabled = false;
-            }
-
-            var runner = bot.GetComponent<BaseRunner>();
-            if (runner != null)
-            {
-                runner.SetId(i);
-                runner.UnFreeze();
-            }
-
+            // Spawneamos lejos para evitar parpadeos y luego movemos
+            GameObject bot = Instantiate(botPrefab, new Vector3(0,-100,0), Quaternion.identity);
             spawnedBots.Add(bot);
+            
+            var runner = bot.GetComponent<BaseRunner>();
+            if (runner != null) runner.SetId(i);
+            
+            RespawnBot(bot); 
         }
+    }
+
+    public void RespawnBot(GameObject bot)
+    {
+        StartCoroutine(SafeRespawn(bot));
+    }
+
+    // Corrutina para asegurar que el posicionamiento sea limpio
+    private IEnumerator SafeRespawn(GameObject bot)
+    {
+        if (foundSpawnPoints.Count == 0) FindAllSpawnPointsInScene();
+        if (foundSpawnPoints.Count == 0) yield break;
+
+        Transform randomSpawn = foundSpawnPoints[Random.Range(0, foundSpawnPoints.Count)];
+
+        if (bot.TryGetComponent<Rigidbody>(out var rb))
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true; 
+        }
+
+        // Aplicamos posición + un pequeño margen de altura para que no se "entierre"
+        bot.transform.position = randomSpawn.position + (Vector3.up * spawnHeightOffset);
+        bot.transform.rotation = randomSpawn.rotation;
+
+        // Esperamos al final del frame para que el motor de física registre la posición
+        yield return new WaitForFixedUpdate();
+
+        if (rb != null) rb.isKinematic = false;
+
+        var runner = bot.GetComponent<BaseRunner>();
+        if (runner != null) runner.UnFreeze();
     }
 }

@@ -7,229 +7,133 @@ using Unity.MLAgents.Sensors;
 
 public class RunnerAgent : Agent
 {
-    [Header("Target & Debug")]
     [SerializeField] private Transform target;
     [SerializeField] private bool training = false;
-    [SerializeField] private bool debugLogs = true;
+    [SerializeField] private float fallLimit = -1.0f; // Límite de caída
 
     private BotRunner controller;
-    private Rigidbody rb;
+    private RaceManager raceManager;
+    private Vector3 diff;
     private Vector3 lastDiff;
     private float backwards = 0f;
 
-    public Vector3 spawnPosition { get; private set; }
-    public Quaternion spawnRotation { get; private set; }
-    public bool spawnPositionCaptured { get; private set; } = false;
-    private List<Transform> localGoalsCache = null;
-
-    private void Awake()
-    {
-        Debug.Log($"[RunnerAgent] Awake on {gameObject.name}. Scripts are compiling!");
-    }
+    // Variables para detección de estancamiento
+    private Vector3 lastPosition;
+    private float stuckTimer = 0f;
+    private const float stuckThreshold = 0.2f; 
+    private const float maxStuckTime = 2.0f;   
 
     public override void Initialize()
     {
-        Debug.Log($"[RunnerAgent] Initialize on {gameObject.name}");
         controller = GetComponent<BotRunner>();
-        rb = GetComponent<Rigidbody>();
+        raceManager = FindFirstObjectByType<RaceManager>();
         
-        CaptureSpawn();
-        FindLocalTarget();
-    }
-
-    private void CaptureSpawn()
-    {
-        if (!spawnPositionCaptured)
-        {
-            spawnPosition = transform.position;
-            spawnRotation = transform.rotation;
-            spawnPositionCaptured = true;
-            if (debugLogs) Debug.Log($"[RunnerAgent] Spawn Captured: {spawnPosition}");
-        }
-    }
-
-    private void FindLocalTarget()
-    {
-        Transform searchRoot = transform.parent != null ? transform.parent : transform;
-        if (localGoalsCache == null || localGoalsCache.Count == 0)
-        {
-            localGoalsCache = new List<Transform>();
-            foreach (var col in searchRoot.GetComponentsInChildren<Collider>(true))
-            {
-                if (col.CompareTag("Goal")) localGoalsCache.Add(col.transform);
-            }
-        }
-
-        float closestDist = Mathf.Infinity;
-        Transform closestGoal = null;
-        foreach (Transform goal in localGoalsCache)
-        {
-            if (goal == null) continue;
-            float dist = Vector3.Distance(transform.position, goal.position);
-            if (dist < closestDist)
-            {
-                closestDist = dist;
-                closestGoal = goal;
-            }
-        }
-
-        if (closestGoal != null) target = closestGoal;
-        else
-        {
-            GameObject globalGoal = GameObject.FindWithTag("Goal");
-            if (globalGoal != null) target = globalGoal.transform;
-        }
-        
-        if (debugLogs) Debug.Log($"[RunnerAgent] Target Found: {(target != null ? target.name : "NONE")}");
-    }
-
-    public void Respawn()
-    {
-        if (rb != null)
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-            rb.isKinematic = true;
-        }
-
-        transform.position = spawnPosition;
-        transform.rotation = spawnRotation;
-
-        if (rb != null)
-        {
-            rb.position = transform.position;
-            rb.rotation = transform.rotation;
-            rb.isKinematic = false;
-        }
-        
-        Physics.SyncTransforms();
-        if (controller != null) 
-        {
-            controller.UnFreeze();
-            controller.SetMovement(0, 0);
-        }
+        GameObject goal = GameObject.FindWithTag("Goal");
+        if (goal != null) target = goal.transform;
     }
 
     public override void OnEpisodeBegin()
     {
-        if (debugLogs) Debug.Log($"[RunnerAgent] Episode Begin - Resetting Reward and Respawning");
-        
-        SetReward(0f); // Manual reset to ensure clean state
-        CaptureSpawn();
-        Respawn();
-        FindLocalTarget();
-
-        if (controller != null)
+        if (raceManager != null)
         {
-            controller.enabled = true;
-            controller.canMove = true;
+            raceManager.RespawnBot(this.gameObject);
         }
 
-        // --- RESET DATA ---
-        lastDiff = Vector3.zero; 
+        controller.enabled = true;
+        controller.canMove = true;
         backwards = 0f;
+        stuckTimer = 0f;
+        lastPosition = transform.position;
+
+        if (target != null)
+        {
+            lastDiff = (target.transform.localPosition - transform.localPosition) / 20;
+        }
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (target == null) return;
 
-        // Log entry to track if it's actually running
-        // Debug.Log("[RunnerAgent] Collecting Observations...");
+        diff = (target.transform.localPosition - transform.localPosition) / 20;
+        sensor.AddObservation(diff);
 
-        if (target == null || rb == null) 
+        if (diff.magnitude < lastDiff.magnitude) AddReward(0.01f);
+        if (diff.magnitude > lastDiff.magnitude)
         {
-            // IF TARGET IS NULL, WE STILL MUST ADD 5 VALUES
-            for (int i = 0; i < 5; i++) sensor.AddObservation(0f);
-            return;
+            AddReward(-0.01f);
+            backwards += 0.1f;
         }
+        lastDiff = diff;
 
-        Vector3 currentDiff = (target.position - transform.position) / 20f;
-        
-        // OBSERVATIONS (Exactly 5 floats)
-        sensor.AddObservation(currentDiff.x); // 1
-        sensor.AddObservation(currentDiff.z); // 2
-
-        Vector3 localVel = transform.InverseTransformDirection(rb.linearVelocity);
-        sensor.AddObservation(localVel.x / 10f); // 3
-        sensor.AddObservation(localVel.z / 10f); // 4
-
-        bool floor = Physics.Raycast(transform.position + transform.forward * 1.5f + Vector3.up, Vector3.down, 3f);
-        sensor.AddObservation(floor ? 1f : 0f); // 5
-        
-        // Reward Logic
-        float currentDist = currentDiff.magnitude;
-        float lastDist = (lastDiff != Vector3.zero) ? lastDiff.magnitude : currentDist;
-
-        if (currentDist < lastDist) 
-        {
-            AddReward(0.02f); // Reward moving towards target
-            backwards = Mathf.Max(0f, backwards - 0.2f); // Reduce backwards suspicion
-        }
-        else if (currentDist > lastDist)
-        {
-            AddReward(-0.02f); // Penalize moving away
-            backwards += 0.2f; // Increase backwards suspicion
-        }
-        lastDiff = currentDiff;
-        AddReward(-0.005f); // Tiny time penalty to encourage speed
+        AddReward(-0.005f); 
     }
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-        // Debug.Log($"[RunnerAgent] Action Received: V={actions.ContinuousActions[0]}, H={actions.ContinuousActions[1]}");
-        
         float moveV = Mathf.Clamp(actions.ContinuousActions[0], 0.0f, 1.0f);
         float moveH = Mathf.Clamp(actions.ContinuousActions[1], -1.0f, 1.0f);
-        
-        if (controller != null) controller.SetMovement(moveV, moveH);
+        controller.SetMovement(moveV, moveH);
 
-        if (transform.position.y < -5f)
+        // PENALIZACIÓN POR CAÍDA DEL MAPA
+        if (transform.position.y < fallLimit)
         {
-            AddReward(-10.0f); // Massive penalty for falling
+            AddReward(-2.0f); // Penalización mayor que la de atascarse
             EndEpisode();
+            return; // Salimos para evitar ejecutar el resto de la lógica este frame
         }
 
-        if (backwards > 20f || GetCumulativeReward() < -100f)
+        if (moveV == 0 && moveH == 0)
         {
-            EndEpisode();
+            AddReward(-0.01f);
+        }
+
+        // Lógica de estancamiento
+        float distanceMoved = Vector3.Distance(transform.position, lastPosition);
+        if (distanceMoved < stuckThreshold)
+        {
+            stuckTimer += Time.fixedDeltaTime;
+        }
+        else
+        {
+            stuckTimer = 0f;
+            lastPosition = transform.position;
+        }
+
+        if (stuckTimer > maxStuckTime)
+        {
+            AddReward(-1.0f); 
+            EndEpisode(); 
         }
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
-        // IMPORTANT: NEVER DELETE THIS METHOD OR UNITY CRASHES IA LOGIC
         var continuousActions = actionsOut.ContinuousActions;
-        
-        float v = Input.GetAxisRaw("Vertical");
-        float h = Input.GetAxisRaw("Horizontal");
-
-        // Simple Auto-pilot if no keys
-        if (Mathf.Abs(v) < 0.05f && Mathf.Abs(h) < 0.05f)
-        {
-            if (target == null) FindLocalTarget();
-            if (target != null)
-            {
-                Vector3 toTarget = (target.position - transform.position).normalized;
-                float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
-                v = 0.8f; 
-                h = Mathf.Clamp(angle / 30f, -1f, 1f); 
-            }
-        }
-
-        continuousActions[0] = v;
-        continuousActions[1] = h;
-        
-        // Trace to console
-        // Debug.Log($"[RunnerAgent] Heuristic Output: {v}, {h}");
+        continuousActions[0] = Input.GetAxisRaw("Vertical");
+        continuousActions[1] = Input.GetAxisRaw("Horizontal");
     }
 
     private void OnTriggerEnter(Collider collider)
     {
         if (collider.gameObject.CompareTag("Goal"))
         {
-            AddReward(2000f);
+            AddReward(500f);
             EndEpisode();
+        }
+        if (collider.gameObject.CompareTag("POI"))
+        {
+            AddReward(20f);
+            collider.gameObject.SetActive(false);
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (training)
+        {
+            if (collision.gameObject.CompareTag("Wall")) AddReward(-0.05f);
+            if (collision.gameObject.CompareTag("Obstacle")) AddReward(-0.1f);
         }
     }
 }

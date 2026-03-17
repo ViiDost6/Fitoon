@@ -1,4 +1,3 @@
-// GameManager.cs
 using FishNet;
 using FishNet.Component.Spawning;
 using FishNet.Connection;
@@ -11,10 +10,8 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using Unity.MLAgents.Policies;
 
-/// <summary>
-/// This class handles all data and events related to the race.
-/// </summary>
 public class GameManager : NetworkBehaviour
 {
     int readyPlayers;
@@ -30,6 +27,9 @@ public class GameManager : NetworkBehaviour
     [SerializeField] NetworkObject botPrefab;
     [SerializeField] public Countdown countdown;
     [SerializeField] EscenarioItem scene;
+
+    [Header("IA Config")]
+    [SerializeField] private List<UnityEngine.Object> availableBrains;
 
     public static bool addBots = false;
     
@@ -56,8 +56,7 @@ public class GameManager : NetworkBehaviour
 
     private void OnDestroy()
     {
-        StopAllCoroutines(); // Detiene las corrutinas de Unity inmediatamente
-        
+        StopAllCoroutines();
         if (SceneManager != null)
         {
             SceneManager.OnLoadEnd -= OnSceneLoaded;
@@ -94,9 +93,30 @@ public class GameManager : NetworkBehaviour
         {
             runnerData[i].goalReached = false;
             NetworkObject runnerObject = Instantiate(runnerData[i].connection != null ? playerPrefab : botPrefab, spawnPoints[i].position, spawnPoints[i].rotation, transform);
+            
             BaseRunner runner = runnerObject.GetComponent<BaseRunner>();
             runners.Add(runner);
             runner.SetId(runnerData[i].id);
+
+            if (runnerData[i].connection == null)
+            {
+                var bp = runnerObject.GetComponent<BehaviorParameters>();
+                if (bp != null && availableBrains != null && availableBrains.Count > 0)
+                {
+                    int index = runnerData[i].difficultyIndex;
+                    if (index < availableBrains.Count && availableBrains[index] != null)
+                    {
+                        bp.Model = (Unity.InferenceEngine.ModelAsset)availableBrains[index];
+                    }
+                }
+
+                // Asigna un prefab visual al bot
+                if (runner is BaseRunner baseRunner)
+                {
+                    baseRunner.PickRandomBotCharacter();
+                }
+            }
+
             Spawn(runnerObject, runnerData[i].connection);
         }
     }
@@ -109,7 +129,8 @@ public class GameManager : NetworkBehaviour
                 id = runnerData.Count,
                 connection = null,
                 characterData = CharacterLoader.CreateRandomCharacterData(),
-                name = "Runner #" + runnerData.Count.ToString().PadLeft(2, '0')
+                name = "Runner #" + runnerData.Count.ToString().PadLeft(2, '0'),
+                difficultyIndex = UnityEngine.Random.Range(0, availableBrains.Count)
             });
         }
     }
@@ -122,11 +143,7 @@ public class GameManager : NetworkBehaviour
         Runner runner = runnerData.Find((r) => r.id == id);
         BaseRunner runnerObject = runners.Find((r) => r.GetId() == id);
 
-        if(positionIndex == 0)
-        {
-            StartFinishCountdownRpc();
-        }
-
+        // Cuando alguien llega a la meta
         if (runner != null && !runner.goalReached)
         {
             runner.goalReached = true;
@@ -136,25 +153,22 @@ public class GameManager : NetworkBehaviour
             {
                 player.SetPosition(positionIndex, runnerData.Count);
             }
-        }
 
-        if (positionIndex >= runnerData.Count)
-        {
-            raceFinished = true;
-            StartCoroutine(FinishRace());
+            // Disparar el final cuando llega el PRIMERO
+            if (positionIndex == 1)
+            {
+                StartFinishCountdownRpc();
+            }
         }
     }
 
-    // En GameManager.cs -> Corrutina FinishRace
     IEnumerator FinishRace()
     {
-        raceFinished = true; // Asegura que FinishCountdown se detenga en el siguiente tick
-        yield return new WaitForSeconds(0.1f); // Breve respiro para sincronizar el flag
+        raceFinished = true;
+        yield return new WaitForSeconds(0.1f);
 
         if (IsServerInitialized)
         {
-            // --- THE FIX: ADD THIS DESPAWN LOOP BACK ---
-            // Safely remove all network objects before Unity destroys the scene
             foreach (var runner in runners)
             {
                 if (runner != null && runner.NetworkObject != null && runner.NetworkObject.IsSpawned)
@@ -162,9 +176,7 @@ public class GameManager : NetworkBehaviour
                     runner.NetworkObject.Despawn();
                 }
             }
-            // -------------------------------------------
 
-            // Limpiamos la lista estática antes de cambiar para evitar que el nuevo Lobby lea basura
             LobbyManager.runnerData = new List<Runner>();
 
             SceneLoadData sld = new SceneLoadData("LobbyScene");
@@ -187,7 +199,6 @@ public class GameManager : NetworkBehaviour
     IEnumerator FinishCountdown()
     {
         int countdownVal = 10;
-        // Añadimos comprobación de existencia del objeto (this != null)
         while (countdownVal > 0 && !raceFinished && this != null)
         {
             if (countdownText != null) countdownText.text = countdownVal.ToString();
@@ -197,13 +208,8 @@ public class GameManager : NetworkBehaviour
 
         if (this != null && IsServerInitialized && !raceFinished)
         {
-            // 1. Mark the race as finished to stop other logic
             raceFinished = true; 
-            
-            // 2. Assign placements to players who didn't cross the finish line
             SortRunners(); 
-
-            // 3. Trigger the scene transition to the Lobby
             StartCoroutine(FinishRace()); 
         }
     }
@@ -237,6 +243,7 @@ public class GameManager : NetworkBehaviour
 
         if (addBots) InitializeBots();
         SpawnRunners();
+        FreezeAllRunners();  // Congela los runners inmediatamente después de spawnearlos
 
         yield return StartCoroutine(WaitForCountdown());
         UnfreezeAllRunners();
@@ -257,4 +264,5 @@ public class Runner
     public NetworkConnection connection;
     public CharacterData characterData;
     public bool goalReached = false;
+    public int difficultyIndex;
 }

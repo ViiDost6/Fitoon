@@ -1,87 +1,64 @@
 using UnityEngine;
 using System.Collections;
-using System.Collections.Generic;
 using Unity.MLAgents;
-
-#if UNITY_CINEMACHINE
-using Cinemachine;
-#endif
+using Cinemachine; // Asegúrate de tener el paquete instalado
 
 public class BotCameraAttacher : MonoBehaviour
 {
     [Header("Settings")]
     [SerializeField] private bool followSoloBot = true;
-    [SerializeField] private float searchDelay = 0.5f;
+    [SerializeField] private float searchInterval = 0.5f;
+
+    private Transform _currentTarget;
 
     private void Start()
     {
         if (followSoloBot)
         {
-            StartCoroutine(SearchAndAttach());
+            // Usamos InvokeRepeating para que si el bot reaparece, la cámara lo encuentre
+            InvokeRepeating(nameof(ValidateAndAttach), 0.1f, searchInterval);
         }
     }
 
-    private IEnumerator SearchAndAttach()
+    private void ValidateAndAttach()
     {
-        // Wait a bit for RaceManager to finish spawning
-        yield return new WaitForSeconds(searchDelay);
+        // Si ya tenemos un target y sigue vivo, no buscamos más
+        if (_currentTarget != null) return;
 
-        RunnerAgent[] bots = FindObjectsOfType<RunnerAgent>();
+        RunnerAgent[] bots = Object.FindObjectsByType<RunnerAgent>(FindObjectsSortMode.None);
         
-        // Only attach if there is exactly one bot (ideal for training/debugging)
+        // Solo nos interesa si hay exactamente uno (modo debug/test)
         if (bots.Length == 1)
         {
-            Transform botTransform = bots[0].transform;
-            Debug.Log($"[BotCameraAttacher] Solo bot found: {bots[0].name}. Attaching cameras...");
-
-            // 1. Try to attach to Cinemachine FreeLook
-            AttachToCinemachine(botTransform);
-
-            // 2. Try to attach to custom CameraFollowPlayer script
-            AttachToCustomCamera(botTransform);
+            _currentTarget = bots[0].transform;
+            ApplyTargetToCameras(_currentTarget);
         }
     }
 
-    private void AttachToCinemachine(Transform target)
+    private void ApplyTargetToCameras(Transform target)
     {
-#if UNITY_CINEMACHINE
-        var freeLook = FindObjectOfType<CinemachineFreeLook>();
+        Debug.Log($"[BotCameraAttacher] Vinculando cámara a: {target.name}");
+
+        // 1. Cinemachine (La forma más limpia si usas el paquete)
+        CinemachineVirtualCamera vcam = Object.FindObjectOfType<CinemachineVirtualCamera>();
+        if (vcam != null)
+        {
+            vcam.Follow = target;
+            vcam.LookAt = target;
+        }
+
+        CinemachineFreeLook freeLook = Object.FindObjectOfType<CinemachineFreeLook>();
         if (freeLook != null)
         {
             freeLook.Follow = target;
             freeLook.LookAt = target;
-            Debug.Log("[BotCameraAttacher] Attached to Cinemachine FreeLook.");
         }
-#else
-        // If the symbol is not defined, try via reflection or generic GetComponent to avoid compile errors
-        // but let's assume if they have the package, the DLL is there.
-        // As a fallback, try to find a component named 'CinemachineFreeLook' through its string name
-        GameObject mainCam = GameObject.Find("Main Camera");
-        if (mainCam != null)
-        {
-            // Just searching for any component that might have 'Follow' and 'LookAt'
-            Component[] allComponents = FindObjectsOfType<Component>();
-            foreach (var comp in allComponents)
-            {
-                if (comp.GetType().Name.Contains("CinemachineFreeLook"))
-                {
-                    comp.GetType().GetProperty("Follow")?.SetValue(comp, target);
-                    comp.GetType().GetProperty("LookAt")?.SetValue(comp, target);
-                    Debug.Log("[BotCameraAttacher] Attached to Cinemachine via Reflection.");
-                    break;
-                }
-            }
-        }
-#endif
-    }
 
-    private void AttachToCustomCamera(Transform target)
-    {
-        CameraFollowPlayer followScript = FindObjectOfType<CameraFollowPlayer>();
+        // 2. Tu script personalizado
+        CameraFollowPlayer followScript = Object.FindObjectOfType<CameraFollowPlayer>();
         if (followScript != null)
         {
             followScript.target = target;
-            Debug.Log("[BotCameraAttacher] Attached to CameraFollowPlayer script.");
         }
     }
 }

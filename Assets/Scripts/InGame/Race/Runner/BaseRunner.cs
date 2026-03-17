@@ -61,7 +61,7 @@ public class BaseRunner : NetworkBehaviour
 		syncedBotPrefabIndex.OnChange -= OnBotPrefabChanged;
 	}
 
-	protected void PickRandomBotCharacter()
+	public void PickRandomBotCharacter()
 	{
 		if (!IsServerInitialized && !RaceManager.isTraining) return;
 		if (botPrefabList == null || botPrefabList.Count == 0) return;
@@ -282,7 +282,8 @@ public class BaseRunner : NetworkBehaviour
 	}
 	void GoalReached()
 	{
-		if(!IsOwner && !RaceManager.isTraining)
+		// Ejecutar si: es el propietario, o el servidor (para bots), o estamos entrenando
+		if(!IsOwner && !IsServerInitialized && !RaceManager.isTraining)
 			return;
 
 		if (RaceManager.isTraining && !IsServerInitialized)

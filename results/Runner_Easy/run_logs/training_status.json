@@ -1,0 +1,65 @@
+{
+    "Runner_Easy": {
+        "checkpoints": [
+            {
+                "steps": 399950,
+                "file_path": "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-399950.onnx",
+                "reward": 186.49753163713817,
+                "creation_time": 1773739346.8684056,
+                "auxillary_file_paths": [
+                    "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-399950.pt"
+                ]
+            },
+            {
+                "steps": 499962,
+                "file_path": "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-499962.onnx",
+                "reward": 204.07593150194302,
+                "creation_time": 1773739399.130975,
+                "auxillary_file_paths": [
+                    "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-499962.pt"
+                ]
+            },
+            {
+                "steps": 599993,
+                "file_path": "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-599993.onnx",
+                "reward": 289.9480800628662,
+                "creation_time": 1773739452.023162,
+                "auxillary_file_paths": [
+                    "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-599993.pt"
+                ]
+            },
+            {
+                "steps": 699947,
+                "file_path": "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-699947.onnx",
+                "reward": 252.88516210744402,
+                "creation_time": 1773739503.8274212,
+                "auxillary_file_paths": [
+                    "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-699947.pt"
+                ]
+            },
+            {
+                "steps": 750172,
+                "file_path": "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-750172.onnx",
+                "reward": 155.8348516826244,
+                "creation_time": 1773739530.68774,
+                "auxillary_file_paths": [
+                    "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-750172.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 750172,
+            "file_path": "results\\Runner_Easy\\Runner_Easy.onnx",
+            "reward": 155.8348516826244,
+            "creation_time": 1773739530.68774,
+            "auxillary_file_paths": [
+                "results\\Runner_Easy\\Runner_Easy\\Runner_Easy-750172.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.0.1+cpu"
+    }
+}

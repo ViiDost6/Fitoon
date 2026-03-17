@@ -18,7 +18,8 @@ GameObject:
   - component: {fileID: 8406689154444885458}
   - component: {fileID: 8184351165326348791}
   - component: {fileID: -5592726884802945057}
-  m_Layer: 0
+  - component: {fileID: -6383253043748552799}
+  m_Layer: 2
   m_Name: BotRunnerPrefab
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -39,7 +40,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6580210646229582467}
-  - {fileID: 2385788167438733959}
   - {fileID: 6112529439311352996}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -80,7 +80,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3812855208846561209}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
   m_Name: 
@@ -183,7 +183,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3812855208846561209}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a2836e36774ca1c4bbbee976e17b649c, type: 3}
   m_Name: 
@@ -232,7 +232,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 5
+    VectorObservationSize: 3
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2
@@ -243,8 +243,8 @@ MonoBehaviour:
     hasUpgradedBrainParametersWithActionSpec: 1
   m_Model: {fileID: 0}
   m_InferenceDevice: 3
-  m_BehaviorType: 0
-  m_BehaviorName: Runner
+  m_BehaviorType: 1
+  m_BehaviorName: Runner_Hard
   TeamId: 0
   m_UseChildSensors: 1
   m_UseChildActuators: 1
@@ -279,7 +279,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Demonstrations.DemonstrationRecorder
   Record: 0
   NumStepsToRecord: 0
-  DemonstrationName: Dizzy
+  DemonstrationName: Demo
   DemonstrationDirectory: Assets/Demonstrations
 --- !u!114 &-5592726884802945057
 MonoBehaviour:
@@ -299,7 +299,39 @@ MonoBehaviour:
   MaxStep: 1000000
   target: {fileID: 0}
   training: 1
-  debugLogs: 0
+  fallLimit: -1
+--- !u!114 &-6383253043748552799
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3812855208846561209}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.RayPerceptionSensorComponent3D
+  m_SensorName: RayPerceptionSensor
+  m_DetectableTags:
+  - Checkpoint
+  - Wall
+  - Obstacle
+  - POI
+  m_RaysPerDirection: 3
+  m_MaxRayDegrees: 70
+  m_SphereCastRadius: 0.5
+  m_RayLength: 10
+  m_RayLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967283
+  m_ObservationStacks: 1
+  m_AlternatingRayOrder: 1
+  m_UseBatchedRaycasts: 0
+  rayHitColor: {r: 1, g: 0, b: 0, a: 1}
+  rayMissColor: {r: 1, g: 1, b: 1, a: 1}
+  m_StartVerticalOffset: 0
+  m_EndVerticalOffset: 0
 --- !u!1 &4910267906132348993
 GameObject:
   m_ObjectHideFlags: 0
@@ -312,7 +344,7 @@ GameObject:
   - component: {fileID: 6637125577544491710}
   - component: {fileID: 5700345409803922625}
   - component: {fileID: 6665612461662385818}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: NameTag
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -494,105 +526,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ffb06dfa76225274396e59d945d4fdde, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &7105264223783832626
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2385788167438733959}
-  - component: {fileID: 2340639746507352890}
-  - component: {fileID: 731976238132779398}
-  m_Layer: 0
-  m_Name: RaycastTransform
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2385788167438733959
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7105264223783832626}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.2, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7026624442636918302}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2340639746507352890
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7105264223783832626}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_SensorName: RayPerceptionSensorUp
-  m_DetectableTags:
-  - Floor
-  - Wall
-  - POI
-  - Goal
-  - Obstacle
-  m_RaysPerDirection: 3
-  m_MaxRayDegrees: 50
-  m_SphereCastRadius: 0.5
-  m_RayLength: 15
-  m_RayLayerMask:
-    serializedVersion: 2
-    m_Bits: 4294967233
-  m_ObservationStacks: 1
-  m_AlternatingRayOrder: 1
-  m_UseBatchedRaycasts: 0
-  rayHitColor: {r: 0.10924828, g: 1, b: 0, a: 1}
-  rayMissColor: {r: 1, g: 0, b: 0, a: 1}
-  m_StartVerticalOffset: 0
-  m_EndVerticalOffset: 0
---- !u!114 &731976238132779398
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7105264223783832626}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_SensorName: RayPerceptionSensorDown
-  m_DetectableTags:
-  - Floor
-  - Wall
-  - POI
-  - Goal
-  - Obstacle
-  m_RaysPerDirection: 3
-  m_MaxRayDegrees: 50
-  m_SphereCastRadius: 0.5
-  m_RayLength: 20
-  m_RayLayerMask:
-    serializedVersion: 2
-    m_Bits: 4294967233
-  m_ObservationStacks: 1
-  m_AlternatingRayOrder: 1
-  m_UseBatchedRaycasts: 0
-  rayHitColor: {r: 0.10980393, g: 1, b: 0, a: 1}
-  rayMissColor: {r: 1, g: 0, b: 0, a: 1}
-  m_StartVerticalOffset: 0
-  m_EndVerticalOffset: -5
 --- !u!1001 &8516399505087295174
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -648,6 +581,14 @@ PrefabInstance:
     - target: {fileID: 4505316258393639924, guid: 664bd65ff6397364480e337c0fc58359, type: 3}
       propertyPath: m_Name
       value: Trail
+      objectReference: {fileID: 0}
+    - target: {fileID: 4505316258393639924, guid: 664bd65ff6397364480e337c0fc58359, type: 3}
+      propertyPath: m_Layer
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7267020049306214383, guid: 664bd65ff6397364480e337c0fc58359, type: 3}
+      propertyPath: m_Layer
+      value: 2
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
