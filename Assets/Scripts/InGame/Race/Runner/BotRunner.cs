@@ -12,34 +12,67 @@ public class BotRunner : BaseRunner
     float moveV;
     float moveH;
 
-	void FixedUpdate()
+    void FixedUpdate()
     {
-		if (!canMove) return;
+        if (!canMove) return;
 
-		//-------------------------------------------------------------------------------
-		//Esto no tiene mucho sentido, pero es la forma en la que han entrenado los bots
-		rigidBody.AddForce(transform.forward * baseSpeed * 10f, ForceMode.Force);
+        // 1. ROTACIÓN LIMITADA (Igual que el jugador humano)
+        // Calculamos el giro incremental basado en moveH
+        float turnAmount = moveH * rotationSpeed * 120f * Time.fixedDeltaTime;
+        Quaternion nextRotation = rigidBody.rotation * Quaternion.Euler(0, turnAmount, 0);
 
-		//Rotate Player based on Horizontal input
-		Vector3 rotation = new Vector3(0, moveH * rotationSpeed, 0);
-		Vector3 currentRotation = transform.rotation.eulerAngles;
-		Vector3 limitedRotation = RotationLimited(currentRotation);
-		rigidBody.MoveRotation(Quaternion.Euler(limitedRotation + rotation));
+        // Limitamos la rotación para que no puedan girar más de 90 grados a cada lado (N/E/O)
+        Vector3 limitedEuler = RotationLimited(nextRotation.eulerAngles);
+        rigidBody.MoveRotation(Quaternion.Euler(limitedEuler));
 
-		Vector3 moveDirection = transform.forward * moveV + transform.right * moveH;
-		if (moveV != 0) rigidBody.AddForce(moveDirection.normalized * baseSpeed * 10f * Mathf.Max(0.1f, speedMultiplier), ForceMode.Force);
-		//-------------------------------------------------------------------------------
+        // 2. MOVIMIENTO FÍSICO RESPONSIVO
+        if (moveV > 0)
+        {
+            // Usamos VelocityChange para una respuesta instantánea y fluida
+            Vector3 targetVelocity = transform.forward * moveV * baseSpeed * Mathf.Max(0.1f, speedMultiplier);
+            Vector3 velocityChange = targetVelocity - new Vector3(rigidBody.linearVelocity.x, 0, rigidBody.linearVelocity.z);
+            rigidBody.AddForce(velocityChange, ForceMode.VelocityChange);
+        }
+        else
+        {
+            // Si no hay input vertical, frenamos el movimiento lateral/forward gradualmente para evitar jitter
+            Vector3 currentVel = new Vector3(rigidBody.linearVelocity.x, 0, rigidBody.linearVelocity.z);
+            rigidBody.AddForce(-currentVel * 0.1f, ForceMode.VelocityChange);
+        }
 
+        BaseFixedUpdate();
 
+        // 3. ANIMACIONES
+        if (animator != null)
+        {
+            float horizontalSpeed = new Vector3(rigidBody.linearVelocity.x, 0, rigidBody.linearVelocity.z).magnitude;
+            animator.SetBool("isRunning", moveV > 0.1f);
+            animator.SetFloat("playerSpeed", horizontalSpeed / 10f);
 
-		/* Si en alg�n momento se vuelven a entrenar los bots desde cero recomiendo usar esto, o algo parecido a esto
-		rigidBody.rotation = Quaternion.Slerp(rigidBody.rotation, Quaternion.Euler(0, moveH, 0), rotationSpeed);
-		rigidBody.AddForce(transform.forward * moveV * Mathf.Max(0.1f, speedMultiplier) * baseSpeed, ForceMode.VelocityChange);
-		*/
-        rigidBody.rotation = Quaternion.Slerp(rigidBody.rotation, Quaternion.Euler(0, moveH, 0), rotationSpeed);
-		rigidBody.AddForce(transform.forward * moveV * Mathf.Max(0.1f, speedMultiplier) * baseSpeed, ForceMode.VelocityChange);
-		BaseFixedUpdate();
-	}
+            bool grounded = Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, 1.5f, whatIsGround);
+            animator.SetBool("isFalling", !grounded);
+        }
+
+        // 4. LÓGICA DE VELOCIDAD RELATIVA AL JUGADOR (Solo fuera de entrenamiento)
+        if (!RaceManager.isTraining)
+        {
+            PlayerController player = FindFirstObjectByType<PlayerController>();
+            if (player != null)
+            {
+                Rigidbody playerRb = player.GetComponent<Rigidbody>();
+                if (playerRb != null)
+                {
+                    float playerSpeed = playerRb.linearVelocity.magnitude;
+                    float targetSpeed = playerSpeed + UnityEngine.Random.Range(-0.3f, 0.3f);
+                    
+                    if (rigidBody.linearVelocity.magnitude > 0.1f)
+                    {
+                        rigidBody.linearVelocity = rigidBody.linearVelocity.normalized * targetSpeed;
+                    }
+                }
+            }
+        }
+    }
 
 	private void Update()
 	{
@@ -48,24 +81,20 @@ public class BotRunner : BaseRunner
 		RaycastHit hit;
 		bool grounded = Physics.Raycast(transform.position, Vector3.down, out hit, 2 * 0.5f + 3f, whatIsGround);
 
-		//Limit velocity
+		// Limit velocity to avoid speed hacks/bugs
 		Vector3 flatVel = new Vector3(rigidBody.linearVelocity.x, 0f, rigidBody.linearVelocity.z);
-
-		if (flatVel.magnitude > baseSpeed)
+		if (flatVel.magnitude > baseSpeed * 2f)
 		{
-			Vector3 limitedVel = flatVel.normalized * baseSpeed;
+			Vector3 limitedVel = flatVel.normalized * baseSpeed * 2f;
 			rigidBody.linearVelocity = new Vector3(limitedVel.x, rigidBody.linearVelocity.y, limitedVel.z);
 		}
 
-		//Handle drag
-
-
+		// Drag Control
 		if (grounded)
 		{
 			rigidBody.linearDamping = groundDrag;
 		}
-
-		else if (!grounded)
+		else
 		{
 			rigidBody.linearDamping = 0;
 		}
@@ -76,20 +105,12 @@ public class BotRunner : BaseRunner
 		BaseAwake();
 		if (IsServerInitialized)
 		{
-			Debug.Log("im on da server!");
 			SetCharacter(CharacterLoader.CreateRandomCharacterData(), "");
-		}
-		else
-		{
-			//GetComponent<BotRunner>().enabled = false;
-			//GetComponent<RunnerAgent>().enabled = false;
-			//GetComponent<DecisionRequester>().enabled = false;
-			//GetComponent<BehaviorParameters>().enabled = false;
 		}
 	}
 
 	/// <summary>
-	/// Set the movement of the bot. This method is used to set the movement values for the bot. It receives these values from the ML-Agents training.
+	/// Set the movement of the bot. Receives values from ML-Agents or Human Input.
 	/// </summary>
 	public void SetMovement(float moveV, float moveH)
 	{
@@ -100,19 +121,18 @@ public class BotRunner : BaseRunner
 		}
 	}
 
-	private Vector3 RotationLimited(Vector3 rotation)
-	{
-		if (rotation.y > 90 && rotation.y < 270)
-		{
-			if (rotation.y < 180)
-			{
-				rotation.y = 90; // Ajustar a 90 si est� entre 90 y 180
-			}
-			else
-			{
-				rotation.y = 270; // Ajustar a 270 si est� entre 180 y 270
-			}
-		}
-		return rotation;
-	}
+    /// <summary>
+    /// Clamps the Y rotation to ensure bots cannot look backwards (90 degrees left/right limit).
+    /// </summary>
+    private Vector3 RotationLimited(Vector3 rotation)
+    {
+        if (rotation.y > 90 && rotation.y < 270)
+        {
+            if (rotation.y < 180)
+                rotation.y = 90;
+            else
+                rotation.y = 270;
+        }
+        return rotation;
+    }
 }

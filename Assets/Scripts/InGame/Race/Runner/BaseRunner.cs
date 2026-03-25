@@ -301,7 +301,9 @@ public class BaseRunner : NetworkBehaviour
 		GetComponent<Collider>().enabled = false;
 
 		var tm = FindFirstObjectByType<GameManager>();
-		if (tm != null && !RaceManager.isTraining) tm.GoalReached(id.Value);
+		// Siempre notificar al GameManager cuando alguien llega a la meta
+		if (tm != null) 
+			tm.GoalReached(id.Value);
 	}
 
 	[ServerRpc]

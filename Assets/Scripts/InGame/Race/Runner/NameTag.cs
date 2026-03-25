@@ -6,6 +6,9 @@ public class NameTag : MonoBehaviour
 {
     void Update()
     {
-        transform.LookAt(Camera.main.transform, Vector3.up);
-	}
+        if (Camera.main != null)
+        {
+            transform.LookAt(Camera.main.transform, Vector3.up);
+        }
+    }
 }

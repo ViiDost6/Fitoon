@@ -852,8 +852,8 @@ MonoBehaviour:
   scene: {fileID: 0}
   availableBrains:
   - {fileID: 5022602860645237092, guid: 7edfd1409ae43f8488b4381a7451f166, type: 3}
-  - {fileID: 5022602860645237092, guid: 2496d642f3a3252419053db05c1842c4, type: 3}
-  - {fileID: 5022602860645237092, guid: cfb2d7a80720dd344bfc76282f413658, type: 3}
+  - {fileID: 5022602860645237092, guid: 9482cab255493b34db3bb526252c47e9, type: 3}
+  - {fileID: 5022602860645237092, guid: cc691487578a00f4ca0c73b8eb7d41f8, type: 3}
 --- !u!114 &6724398444373056634
 MonoBehaviour:
   m_ObjectHideFlags: 0

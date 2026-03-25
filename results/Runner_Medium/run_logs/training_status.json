@@ -2,31 +2,58 @@
     "Runner_Medium": {
         "checkpoints": [
             {
-                "steps": 499974,
-                "file_path": "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-499974.onnx",
-                "reward": 221.93521271614318,
-                "creation_time": 1773746139.2920291,
+                "steps": 6999781,
+                "file_path": "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-6999781.onnx",
+                "reward": 108.19031244516373,
+                "creation_time": 1774357502.1552267,
                 "auxillary_file_paths": [
-                    "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-499974.pt"
+                    "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-6999781.pt"
                 ]
             },
             {
-                "steps": 700033,
-                "file_path": "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-700033.onnx",
-                "reward": 175.92071642194475,
-                "creation_time": 1773746265.26624,
+                "steps": 7499807,
+                "file_path": "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-7499807.onnx",
+                "reward": 65.01249476273854,
+                "creation_time": 1774357990.8122885,
                 "auxillary_file_paths": [
-                    "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-700033.pt"
+                    "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-7499807.pt"
+                ]
+            },
+            {
+                "steps": 7999941,
+                "file_path": "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-7999941.onnx",
+                "reward": 107.61837193965911,
+                "creation_time": 1774358463.982975,
+                "auxillary_file_paths": [
+                    "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-7999941.pt"
+                ]
+            },
+            {
+                "steps": 8499889,
+                "file_path": "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-8499889.onnx",
+                "reward": 85.58099269866943,
+                "creation_time": 1774358952.8447342,
+                "auxillary_file_paths": [
+                    "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-8499889.pt"
+                ]
+            },
+            {
+                "steps": 8934227,
+                "file_path": "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-8934227.onnx",
+                "reward": 90.24876910448074,
+                "creation_time": 1774359391.4919732,
+                "auxillary_file_paths": [
+                    "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-8934227.pt"
                 ]
             }
         ],
         "final_checkpoint": {
-            "steps": 700033,
+            "steps": 8934227,
             "file_path": "results\\Runner_Medium\\Runner_Medium.onnx",
-            "reward": 175.92071642194475,
-            "creation_time": 1773746265.26624,
+            "reward": 90.24876910448074,
+            "creation_time": 1774359391.4919732,
             "auxillary_file_paths": [
-                "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-700033.pt"
+                "results\\Runner_Medium\\Runner_Medium\\Runner_Medium-8934227.pt"
             ]
         }
     },

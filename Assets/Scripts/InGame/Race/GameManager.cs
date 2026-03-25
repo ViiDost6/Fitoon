@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using Unity.InferenceEngine;
 using Unity.MLAgents.Policies;
 
 public class GameManager : NetworkBehaviour
@@ -29,7 +30,7 @@ public class GameManager : NetworkBehaviour
     [SerializeField] EscenarioItem scene;
 
     [Header("IA Config")]
-    [SerializeField] private List<UnityEngine.Object> availableBrains;
+    [SerializeField] private List<ModelAsset> availableBrains;
 
     public static bool addBots = false;
     
@@ -94,26 +95,26 @@ public class GameManager : NetworkBehaviour
             runnerData[i].goalReached = false;
             NetworkObject runnerObject = Instantiate(runnerData[i].connection != null ? playerPrefab : botPrefab, spawnPoints[i].position, spawnPoints[i].rotation, transform);
             
-            BaseRunner runner = runnerObject.GetComponent<BaseRunner>();
+            BaseRunner runner = runnerObject.GetComponentInChildren<BaseRunner>();
             runners.Add(runner);
             runner.SetId(runnerData[i].id);
 
             if (runnerData[i].connection == null)
             {
-                var bp = runnerObject.GetComponent<BehaviorParameters>();
+                // Asigna un prefab visual al bot
+                if (runner is BaseRunner baseRunner)
+                {
+                    baseRunner.PickRandomBotCharacter();
+                }
+
+                var bp = runnerObject.GetComponentInChildren<BehaviorParameters>();
                 if (bp != null && availableBrains != null && availableBrains.Count > 0)
                 {
                     int index = runnerData[i].difficultyIndex;
                     if (index < availableBrains.Count && availableBrains[index] != null)
                     {
-                        bp.Model = (Unity.InferenceEngine.ModelAsset)availableBrains[index];
+                        bp.Model = availableBrains[index];
                     }
-                }
-
-                // Asigna un prefab visual al bot
-                if (runner is BaseRunner baseRunner)
-                {
-                    baseRunner.PickRandomBotCharacter();
                 }
             }
 
