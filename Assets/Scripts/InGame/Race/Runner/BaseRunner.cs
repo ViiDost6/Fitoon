@@ -14,7 +14,7 @@ using System.Linq;
 public class BaseRunner : NetworkBehaviour
 {
 	protected GameObject characterObject;
-	[SerializeField] protected float baseSpeed;
+	[SerializeField] protected float baseSpeed = 10f;
 	[SerializeField] protected float rotationSpeed = 1;
 	[SerializeField] protected float groundDrag = 5f;
 	[SerializeField] protected GameObject trailBoost;
@@ -388,4 +388,20 @@ public class BaseRunner : NetworkBehaviour
 	{
 		return id.Value;
 	}
+
+	/// <summary>
+    /// Devuelve la velocidad base definida en el inspector.
+    /// </summary>
+    public float GetBaseSpeed()
+    {
+        return baseSpeed;
+    }
+
+    /// <summary>
+    /// Devuelve el multiplicador de velocidad actual (SpeedBoosts).
+    /// </summary>
+    public float GetSpeedMultiplier()
+    {
+        return speedMultiplier;
+    }
 }

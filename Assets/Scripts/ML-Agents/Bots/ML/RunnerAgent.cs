@@ -2,30 +2,31 @@ using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
-using System.Collections.Generic; // Necesario para usar List
+using System.Collections.Generic;
 
 public class RunnerAgent : Agent
 {
-    [Header("Configuración de Referencias")]
+    [Header("Configuración")]
     [SerializeField] private Transform target;
     [SerializeField] private bool training = true;
     [SerializeField] private float fallLimit = -10.0f;
 
     private BotRunner controller;
     private RaceManager raceManager;
+    private Rigidbody rb;
     
     private float episodeTimer = 0f;
     private Vector3 lastPosition;
     private float stuckTimer = 0f;
-    private const float stuckThreshold = 0.1f;
+    private float maxDistanceReached = 0f; // Para premiar el avance real
 
-    // LISTA PARA CONTROLAR LOS POI RECOGIDOS
     private List<GameObject> collectedPOIs = new List<GameObject>();
     private List<GameObject> checkpointsCrossed = new List<GameObject>();
 
     public override void Initialize()
     {
         controller = GetComponent<BotRunner>();
+        rb = GetComponent<Rigidbody>();
         raceManager = FindFirstObjectByType<RaceManager>();
         
         if (target == null)
@@ -38,81 +39,95 @@ public class RunnerAgent : Agent
     public override void OnEpisodeBegin()
     {
         if (raceManager != null) raceManager.RespawnBot(this.gameObject);
-
+        
         episodeTimer = 0f;
         stuckTimer = 0f;
+        maxDistanceReached = 0f; 
         lastPosition = transform.position;
-
-        // LIMPIAR LA LISTA AL INICIO DE CADA EPISODIO
+        
         collectedPOIs.Clear();
+        checkpointsCrossed.Clear();
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
         if (target == null) return;
-        sensor.AddObservation((target.position - transform.position).normalized);
-        Rigidbody rb = controller.GetComponent<Rigidbody>();
-        sensor.AddObservation(rb.linearVelocity / 10f);
+
+        // 1. Dirección y Distancia (Normalizada)
+        Vector3 toTarget = target.position - transform.position;
+        sensor.AddObservation(toTarget.normalized);
+        sensor.AddObservation(toTarget.magnitude / 100f); 
+
+        // 2. Velocidad propia (Crucial para saber si puede frenar)
+        sensor.AddObservation(rb.linearVelocity / 15f);
+
+        // 3. Orientación respecto al objetivo
+        sensor.AddObservation(Vector3.Dot(transform.forward, toTarget.normalized));
     }
 
     public override void OnActionReceived(ActionBuffers actions)
     {
+        // Suavizado de entrada: evitamos giros nerviosos
         float moveV = Mathf.Clamp(actions.ContinuousActions[0], 0.0f, 1.0f);
         float moveH = Mathf.Clamp(actions.ContinuousActions[1], -1.0f, 1.0f);
+        
         controller.SetMovement(moveV, moveH);
 
-        episodeTimer += Time.fixedDeltaTime;
-        AddReward(-0.1f * Time.fixedDeltaTime);
+        // --- RECOMPENSAS DINÁMICAS ---
 
-        if (Vector3.Distance(transform.position, lastPosition) < stuckThreshold)
+        // 1. Castigo por tiempo (Incentiva la urgencia)
+        episodeTimer += Time.fixedDeltaTime;
+        AddReward(-0.001f); 
+
+        // 2. Recompensa por Progresión (Evita que den vueltas en círculos)
+        float currentDist = Vector3.Distance(transform.position, target.position);
+        float distanceReward = (lastPosition.magnitude - transform.position.magnitude); 
+        // Si se acerca al objetivo, pequeño premio constante
+        if (currentDist < Vector3.Distance(lastPosition, target.position))
+            AddReward(0.01f);
+
+        // 3. Guía de Velocidad Optimizada
+        float currentSpeed = rb.linearVelocity.magnitude;
+        float targetMaxSpeed = controller.GetBaseSpeed() * controller.GetSpeedMultiplier();
+        
+        if (currentSpeed > 1.0f) {
+            float speedRatio = currentSpeed / targetMaxSpeed;
+            // Premiamos ir rápido, pero solo si va en la dirección correcta (Dot Product)
+            float directionLook = Vector3.Dot(transform.forward, (target.position - transform.position).normalized);
+            AddReward(0.02f * speedRatio * Mathf.Clamp01(directionLook));
+        }
+
+        // 4. Control de Estancamiento Riguroso
+        if (Vector3.Distance(transform.position, lastPosition) < 0.05f)
         {
             stuckTimer += Time.fixedDeltaTime;
-            if (stuckTimer > 5.0f)
-            {
-                AddReward(-1.0f);
-                EndEpisode();
-            }
+            if (stuckTimer > 2f) { AddReward(-5f); EndEpisode(); }
         }
-        else
-        {
-            stuckTimer = 0f;
-            lastPosition = transform.position;
-        }
+        else { stuckTimer = 0f; }
 
-        if (transform.position.y < fallLimit)
-        {
-            AddReward(-2.0f);
-            EndEpisode();
-        }
+        lastPosition = transform.position;
+
+        if (transform.position.y < fallLimit) { AddReward(-15f); EndEpisode(); }
     }
 
-    // CONSOLIDADO: Solo un método OnTriggerEnter
     private void OnTriggerEnter(Collider collider)
     {
         if (collider.CompareTag("Goal"))
         {
-            float baseReward = 100f;
-            float timeBonus = Mathf.Max(0, 50f - (episodeTimer * 0.5f));
-            AddReward(baseReward + timeBonus);
+            // Bonus por tiempo mucho más agresivo
+            float timeBonus = Mathf.Max(0, 100f - (episodeTimer * 2f));
+            AddReward(150f + timeBonus); 
             EndEpisode();
         }
-        else if (collider.CompareTag("POI"))
+        else if (collider.CompareTag("POI") && !collectedPOIs.Contains(collider.gameObject))
         {
-            // VERIFICACIÓN DEL ARRAY (LISTA)
-            if (!collectedPOIs.Contains(collider.gameObject))
-            {
-                // Es un POI nuevo
-                AddReward(10f);
-                collectedPOIs.Add(collider.gameObject);
-            }
+            AddReward(15f); // Subimos valor de POI para incentivar desvíos calculados
+            collectedPOIs.Add(collider.gameObject);
         }
-        else if (collider.CompareTag("Checkpoint"))
+        else if (collider.CompareTag("Checkpoint") && !checkpointsCrossed.Contains(collider.gameObject))
         {
-            if (!checkpointsCrossed.Contains(collider.gameObject))
-            {
-                AddReward(0.5f);
-                checkpointsCrossed.Add(collider.gameObject);
-            }
+            AddReward(5f); // Checkpoints ahora valen más para guiar el camino
+            checkpointsCrossed.Add(collider.gameObject);
         }
     }
 
@@ -120,15 +135,19 @@ public class RunnerAgent : Agent
     {
         if (training)
         {
-            if (collision.gameObject.CompareTag("Wall")) AddReward(-0.2f);
-            if (collision.gameObject.CompareTag("Obstacle")) AddReward(-0.5f);
+            // Castigo masivo por choque para forzar aprendizaje de frenado
+            if (collision.gameObject.CompareTag("Wall") || collision.gameObject.CompareTag("Obstacle")) 
+            {
+                AddReward(-15f); 
+                // Opcional: EndEpisode(); // Descomenta si quieres que aprendan a NO tocar nada nunca
+            }
         }
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
         var continuousActions = actionsOut.ContinuousActions;
-        continuousActions[0] = Input.GetAxisRaw("Vertical");
-        continuousActions[1] = Input.GetAxisRaw("Horizontal");
+        continuousActions[0] = Input.GetKey(KeyCode.W) ? 1f : 0f;
+        continuousActions[1] = Input.GetAxis("Horizontal");
     }
 }

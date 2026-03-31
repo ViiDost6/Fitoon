@@ -8,7 +8,7 @@ public class RaceManager : MonoBehaviour
 
     [SerializeField] private GameObject botPrefab;
     [SerializeField] private int botCount = 1;
-    [SerializeField] private float spawnHeightOffset = 0.5f; // Elevación mínima para no chocar con el suelo
+    [SerializeField] private float spawnHeightOffset = 0.5f; 
 
     private List<GameObject> spawnedBots = new List<GameObject>();
     private List<Transform> foundSpawnPoints = new List<Transform>();
@@ -39,8 +39,8 @@ public class RaceManager : MonoBehaviour
 
         for (int i = 0; i < botCount; i++)
         {
-            // Spawneamos lejos para evitar parpadeos y luego movemos
-            GameObject bot = Instantiate(botPrefab, new Vector3(0,-100,0), Quaternion.identity);
+            // Instanciamos temporalmente fuera de vista
+            GameObject bot = Instantiate(botPrefab, new Vector3(0, -100, 0), Quaternion.identity);
             spawnedBots.Add(bot);
             
             var runner = bot.GetComponent<BaseRunner>();
@@ -52,32 +52,49 @@ public class RaceManager : MonoBehaviour
 
     public void RespawnBot(GameObject bot)
     {
-        StartCoroutine(SafeRespawn(bot));
+        if (this.gameObject.activeInHierarchy)
+        {
+            StartCoroutine(SafeRespawn(bot));
+        }
     }
 
-    // Corrutina para asegurar que el posicionamiento sea limpio
     private IEnumerator SafeRespawn(GameObject bot)
     {
         if (foundSpawnPoints.Count == 0) FindAllSpawnPointsInScene();
         if (foundSpawnPoints.Count == 0) yield break;
 
+        // Selección de punto aleatorio
         Transform randomSpawn = foundSpawnPoints[Random.Range(0, foundSpawnPoints.Count)];
 
         if (bot.TryGetComponent<Rigidbody>(out var rb))
         {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            // CORRECCIÓN CRÍTICA: Solo reseteamos físicas si NO es cinemático
+            // Esto evita el error "Setting angular velocity of a kinematic body is not supported"
+            if (!rb.isKinematic)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+            
+            // Lo hacemos cinemático temporalmente para moverlo sin interferencias
             rb.isKinematic = true; 
         }
 
-        // Aplicamos posición + un pequeño margen de altura para que no se "entierre"
+        // Posicionamiento
         bot.transform.position = randomSpawn.position + (Vector3.up * spawnHeightOffset);
         bot.transform.rotation = randomSpawn.rotation;
 
-        // Esperamos al final del frame para que el motor de física registre la posición
+        // Esperamos un frame físico para que Unity asiente la nueva posición
         yield return new WaitForFixedUpdate();
 
-        if (rb != null) rb.isKinematic = false;
+        // Devolvemos el control físico al bot
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            // Doble limpieza post-movimiento para evitar "balas" por inercia acumulada
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
 
         var runner = bot.GetComponent<BaseRunner>();
         if (runner != null) runner.UnFreeze();

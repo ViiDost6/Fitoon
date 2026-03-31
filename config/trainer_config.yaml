@@ -4,8 +4,8 @@ behaviors:
     hyperparameters:
       batch_size: 1024
       buffer_size: 10240
-      learning_rate: 0.0003
-      beta: 0.1
+      learning_rate: 0.00025 # Ligeramente menor para asimilar la nueva velocidad directa
+      beta: 0.01             # Reducido: el bot ya no necesita "explorar" tanto si la velocidad es inmediata
       epsilon: 0.2
       lambd: 0.95
       num_epoch: 3
@@ -16,16 +16,16 @@ behaviors:
       num_layers: 2
     reward_signals:
       extrinsic:
-        gamma: 0.99    # Aumentado para valorar la meta a largo plazo
+        gamma: 0.99
         strength: 1.0
-      curiosity:       # Añadida curiosidad básica para que encuentre la meta
-        strength: 0.1
+      curiosity:
+        strength: 0.05       # Reducida: queremos que se enfoque en la recompensa de velocidad
         network_settings:
           hidden_units: 128
     keep_checkpoints: 5
     checkpoint_interval: 200000
-    max_steps: 5000000
-    time_horizon: 128  # Aumentado para memorizar trayectorias más largas
+    max_steps: 2500000
+    time_horizon: 128
     summary_freq: 10000
 
   Runner_Medium:
@@ -33,27 +33,27 @@ behaviors:
     hyperparameters:
       batch_size: 2048
       buffer_size: 20480
-      learning_rate: 0.0003
-      beta: 0.05      # Menos entropía para que sea más preciso en curvas
+      learning_rate: 0.0002
+      beta: 0.005            # Beta bajo para que sea muy preciso con la nueva física
       epsilon: 0.2
       lambd: 0.95
-      num_epoch: 3
+      num_epoch: 4           # Un epoch extra para estabilizar la política de movimiento
       learning_rate_schedule: linear
     network_settings:
       normalize: true
-      hidden_units: 256 # Red más grande para niveles más complejos
+      hidden_units: 256
       num_layers: 2
     reward_signals:
       extrinsic:
         gamma: 0.99
         strength: 1.0
       curiosity:
-        strength: 0.1  # Mayor curiosidad para mapas con más obstáculos
+        strength: 0.08
         network_settings:
           hidden_units: 256
     keep_checkpoints: 5
     checkpoint_interval: 500000
-    max_steps: 10000000 # Más pasos sugeridos para dominar el bono de tiempo
+    max_steps: 5000000
     time_horizon: 256
     summary_freq: 20000
 
@@ -62,8 +62,8 @@ behaviors:
     hyperparameters:
       batch_size: 2048
       buffer_size: 20480
-      learning_rate: 0.0002 # Aprendizaje más lento para mayor estabilidad
-      beta: 0.005
+      learning_rate: 0.00015 # Aprendizaje lento para manejar picos de velocidad de 100 unidades/s
+      beta: 0.001            # Mínima entropía: queremos ejecución perfecta, no experimentación
       epsilon: 0.2
       lambd: 0.95
       num_epoch: 5
@@ -71,17 +71,17 @@ behaviors:
     network_settings:
       normalize: true
       hidden_units: 512
-      num_layers: 3    # Tres capas para procesar maniobras evasivas complejas
+      num_layers: 3
     reward_signals:
       extrinsic:
-        gamma: 0.995   # Máxima importancia a terminar la pista
+        gamma: 0.995
         strength: 1.0
       curiosity:
-        strength: 0.2  # Curiosidad alta para no quedarse atascado en callejones sin salida
+        strength: 0.1
         network_settings:
-          hidden_units: 256
+          hidden_units: 512
     keep_checkpoints: 5
     checkpoint_interval: 500000
-    max_steps: 20000000
+    max_steps: 10000000
     time_horizon: 512
     summary_freq: 20000
