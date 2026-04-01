@@ -29,9 +29,6 @@ public class GameManager : NetworkBehaviour
     [SerializeField] public Countdown countdown;
     [SerializeField] EscenarioItem scene;
 
-    [Header("IA Config")]
-    [SerializeField] private List<ModelAsset> availableBrains;
-
     public static bool addBots = false;
     
     List<BaseRunner> runners = new List<BaseRunner>();
@@ -106,16 +103,6 @@ public class GameManager : NetworkBehaviour
                 {
                     baseRunner.PickRandomBotCharacter();
                 }
-
-                var bp = runnerObject.GetComponentInChildren<BehaviorParameters>();
-                if (bp != null && availableBrains != null && availableBrains.Count > 0)
-                {
-                    int index = runnerData[i].difficultyIndex;
-                    if (index < availableBrains.Count && availableBrains[index] != null)
-                    {
-                        bp.Model = availableBrains[index];
-                    }
-                }
             }
 
             Spawn(runnerObject, runnerData[i].connection);
@@ -131,7 +118,6 @@ public class GameManager : NetworkBehaviour
                 connection = null,
                 characterData = CharacterLoader.CreateRandomCharacterData(),
                 name = "Runner #" + runnerData.Count.ToString().PadLeft(2, '0'),
-                difficultyIndex = UnityEngine.Random.Range(0, availableBrains.Count)
             });
         }
     }

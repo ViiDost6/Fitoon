@@ -4,12 +4,15 @@ using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
 using System.Collections.Generic;
 
+
 public class RunnerAgent : Agent
 {
     [Header("Configuración")]
     [SerializeField] private Transform target;
     [SerializeField] private bool training = true;
     [SerializeField] private float fallLimit = -10.0f;
+
+    public List<Unity.InferenceEngine.ModelAsset> brains;
 
     private BotRunner controller;
     private RaceManager raceManager;
@@ -25,6 +28,8 @@ public class RunnerAgent : Agent
 
     public override void Initialize()
     {
+        LazyInitialize();
+
         controller = GetComponent<BotRunner>();
         rb = GetComponent<Rigidbody>();
         raceManager = FindFirstObjectByType<RaceManager>();
@@ -34,6 +39,17 @@ public class RunnerAgent : Agent
             GameObject goal = GameObject.FindWithTag("Goal");
             if (goal != null) target = goal.transform;
         }
+
+        if (brains.Count > 0 && !training)
+        {
+            SetNNModel();
+        }
+    }
+
+    private void SetNNModel()
+    {
+        int brainNum = UnityEngine.Random.Range(0, brains.Count);
+        SetModel("Runner", brains[brainNum]);
     }
 
     public override void OnEpisodeBegin()
