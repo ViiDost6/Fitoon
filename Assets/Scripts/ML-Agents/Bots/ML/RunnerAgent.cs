@@ -28,7 +28,7 @@ public class RunnerAgent : Agent
 
     public override void Initialize()
     {
-        LazyInitialize();
+        this.LazyInitialize();
 
         controller = GetComponent<BotRunner>();
         rb = GetComponent<Rigidbody>();
@@ -39,9 +39,19 @@ public class RunnerAgent : Agent
             GameObject goal = GameObject.FindWithTag("Goal");
             if (goal != null) target = goal.transform;
         }
+    }
 
-        if (brains.Count > 0 && !training)
+    private void Start()
+    {
+        // Aseguramos que los componentes existen
+        if (rb == null) rb = GetComponent<Rigidbody>();
+
+        if (!training && brains != null && brains.Count > 0)
         {
+            // 1. Forzamos la inicialización interna de ML-Agents
+            this.LazyInitialize();
+            
+            // 2. Cambiamos el modelo
             SetNNModel();
         }
     }
@@ -67,7 +77,10 @@ public class RunnerAgent : Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        if (target == null) return;
+        if (target == null || rb == null) 
+        {
+            return; 
+        }
 
         // 1. Dirección y Distancia (Normalizada)
         Vector3 toTarget = target.position - transform.position;
