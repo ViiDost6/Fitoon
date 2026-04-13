@@ -49,7 +49,7 @@ public class RunnerAgent : Agent
     private void SetNNModel()
     {
         int brainNum = UnityEngine.Random.Range(0, brains.Count);
-        SetModel("Runner", brains[brainNum]);
+        this.SetModel("Runner", brains[brainNum]);
     }
 
     public override void OnEpisodeBegin()
