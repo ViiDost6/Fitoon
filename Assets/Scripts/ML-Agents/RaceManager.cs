@@ -44,7 +44,12 @@ public class RaceManager : MonoBehaviour
             spawnedBots.Add(bot);
             
             var runner = bot.GetComponent<BaseRunner>();
-            if (runner != null) runner.SetId(i);
+            if (runner != null) 
+            {
+                runner.SetId(i);
+                // Ensure character model is loaded immediately so bot is visible
+                runner.PickRandomBotCharacter();
+            }
             
             RespawnBot(bot); 
         }
