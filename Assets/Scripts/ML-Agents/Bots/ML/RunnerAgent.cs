@@ -28,8 +28,6 @@ public class RunnerAgent : Agent
 
     public override void Initialize()
     {
-        this.LazyInitialize();
-
         controller = GetComponent<BotRunner>();
         rb = GetComponent<Rigidbody>();
         raceManager = FindFirstObjectByType<RaceManager>();
@@ -38,6 +36,17 @@ public class RunnerAgent : Agent
         {
             GameObject goal = GameObject.FindWithTag("Goal");
             if (goal != null) target = goal.transform;
+        }
+
+        // Only initialize ML-Agents if we have a valid model or are in training mode
+        if (training || (brains != null && brains.Count > 0))
+        {
+            Debug.Log($"[RunnerAgent] Initializing ML-Agents for {gameObject.name}. Training: {training}, Brains Available: {(brains != null ? brains.Count : 0)}");
+            this.LazyInitialize();
+        }
+        else
+        {
+            Debug.LogWarning($"[RunnerAgent] Skipping ML-Agents initialization for {gameObject.name}. Training: {training}, Brains: {(brains != null ? brains.Count : 0)}");
         }
     }
 
@@ -48,17 +57,39 @@ public class RunnerAgent : Agent
 
         if (!training && brains != null && brains.Count > 0)
         {
-            // 1. Forzamos la inicialización interna de ML-Agents
-            this.LazyInitialize();
+            Debug.Log($"[RunnerAgent] Start() for {gameObject.name} - Loading inference model. Brains: {brains.Count}");
+            // 1. Ensure ML-Agents is initialized if it wasn't in Initialize()
+            // (it might not have been initialized if brains was null at that time)
+            try
+            {
+                this.LazyInitialize();
+            }
+            catch (System.Exception ex)
+            {
+                // If already initialized or initialization fails, continue
+                Debug.LogWarning($"[RunnerAgent] LazyInitialize in Start() failed or already initialized for {gameObject.name}: {ex.Message}");
+            }
             
             // 2. Cambiamos el modelo
             SetNNModel();
+        }
+        else if (!training)
+        {
+            Debug.LogWarning($"[RunnerAgent] Start() for {gameObject.name} - Training mode OFF but no brains available. Brains: {(brains != null ? brains.Count : 0)}");
         }
     }
 
     private void SetNNModel()
     {
+        if (brains == null || brains.Count == 0)
+        {
+            Debug.LogError($"[RunnerAgent] Cannot set model for {gameObject.name}. Brains list is null or empty!");
+            return;
+        }
+
         int brainNum = UnityEngine.Random.Range(0, brains.Count);
+        string brainName = brains[brainNum] != null ? brains[brainNum].name : "null";
+        Debug.Log($"[RunnerAgent] Assigning brain #{brainNum} ({brainName}) to {gameObject.name}. Total brains available: {brains.Count}");
         this.SetModel("Runner", brains[brainNum]);
     }
 
@@ -100,6 +131,12 @@ public class RunnerAgent : Agent
         float moveV = Mathf.Clamp(actions.ContinuousActions[0], 0.0f, 1.0f);
         float moveH = Mathf.Clamp(actions.ContinuousActions[1], -1.0f, 1.0f);
         
+        if (target == null || rb == null || controller == null) 
+        {
+            return; 
+        }
+
+        // CRITICAL: Apply movement to controller
         controller.SetMovement(moveV, moveH);
 
         // --- RECOMPENSAS DINÁMICAS ---

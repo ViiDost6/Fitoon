@@ -87,21 +87,27 @@ public class GameManager : NetworkBehaviour
 
     void SpawnRunners()
     {
+        if (playerPrefab == null || botPrefab == null)
+        {
+            Debug.LogError($"[GameManager] Prefabs missing on {gameObject.name}. Player: {playerPrefab}, Bot: {botPrefab}");
+            return;
+        }
+
         for (int i = 0; i < runnerData.Count; i++)
         {
             runnerData[i].goalReached = false;
             NetworkObject runnerObject = Instantiate(runnerData[i].connection != null ? playerPrefab : botPrefab, spawnPoints[i].position, spawnPoints[i].rotation, transform);
             
             BaseRunner runner = runnerObject.GetComponentInChildren<BaseRunner>();
-            runners.Add(runner);
-            runner.SetId(runnerData[i].id);
-
-            if (runnerData[i].connection == null)
+            if (runner != null)
             {
-                // Asigna un prefab visual al bot
-                if (runner is BaseRunner baseRunner)
+                runners.Add(runner);
+                runner.SetId(runnerData[i].id);
+
+                if (runnerData[i].connection == null)
                 {
-                    baseRunner.PickRandomBotCharacter();
+                    // Asigna un prefab visual al bot
+                    runner.PickRandomBotCharacter();
                 }
             }
 
@@ -111,19 +117,61 @@ public class GameManager : NetworkBehaviour
 
     void InitializeBots()
     {
-        while (runnerData.Count < 32)
-        {
-            runnerData.Add(new Runner {
-                id = runnerData.Count,
-                connection = null,
-                characterData = CharacterLoader.CreateRandomCharacterData(),
-                name = "Runner #" + runnerData.Count.ToString().PadLeft(2, '0'),
-            });
-        }
-    }
+		// Balanced difficulty distribution for 32 bots
+		// Easy: 0-10 (11 bots), Medium: 11-20 (10 bots), Hard: 21-31 (11 bots)
+		int easyCount = 11;
+		int mediumCount = 10;
+		int hardCount = 11;
 
-    [ServerRpc(RequireOwnership = false)]
-    public void GoalReached(int id)
+		int addedBots = 0;
+
+		// Add EASY bots
+		for (int i = 0; i < easyCount; i++)
+		{
+			runnerData.Add(new Runner
+			{
+				id = addedBots,
+				connection = null,
+				characterData = CharacterLoader.CreateRandomCharacterData(),
+				name = "Runner #" + addedBots.ToString().PadLeft(2, '0'),
+				difficultyIndex = 0 // EASY
+			});
+			addedBots++;
+		}
+
+		// Add MEDIUM bots
+		for (int i = 0; i < mediumCount; i++)
+		{
+			runnerData.Add(new Runner
+			{
+				id = addedBots,
+				connection = null,
+				characterData = CharacterLoader.CreateRandomCharacterData(),
+				name = "Runner #" + addedBots.ToString().PadLeft(2, '0'),
+				difficultyIndex = 1 // MEDIUM
+			});
+			addedBots++;
+		}
+
+		// Add HARD bots
+		for (int i = 0; i < hardCount; i++)
+		{
+			runnerData.Add(new Runner
+			{
+				id = addedBots,
+				connection = null,
+				characterData = CharacterLoader.CreateRandomCharacterData(),
+				name = "Runner #" + addedBots.ToString().PadLeft(2, '0'),
+				difficultyIndex = 2 // HARD
+			});
+			addedBots++;
+		}
+
+		Debug.Log($"[GameManager] Initialized bots with balanced difficulty: EASY: {easyCount}, MEDIUM: {mediumCount}, HARD: {hardCount}. Total: {addedBots}");
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void GoalReached(int id)
     {
         if (raceFinished) return;
 

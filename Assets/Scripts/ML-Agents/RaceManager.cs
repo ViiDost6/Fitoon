@@ -35,12 +35,19 @@ public class RaceManager : MonoBehaviour
 
     void SpawnBots()
     {
-        if (botPrefab == null || foundSpawnPoints.Count == 0) return;
+        if (botPrefab == null)
+        {
+            Debug.LogError("[RaceManager] botPrefab is null! Assign it in the inspector.");
+            return;
+        }
+        if (foundSpawnPoints.Count == 0) return;
 
         for (int i = 0; i < botCount; i++)
         {
             // Instanciamos temporalmente fuera de vista
             GameObject bot = Instantiate(botPrefab, new Vector3(0, -100, 0), Quaternion.identity);
+            if (bot == null) continue;
+
             spawnedBots.Add(bot);
             
             var runner = bot.GetComponent<BaseRunner>();
@@ -57,6 +64,7 @@ public class RaceManager : MonoBehaviour
 
     public void RespawnBot(GameObject bot)
     {
+        if (bot == null) return;
         if (this.gameObject.activeInHierarchy)
         {
             StartCoroutine(SafeRespawn(bot));
@@ -65,6 +73,7 @@ public class RaceManager : MonoBehaviour
 
     private IEnumerator SafeRespawn(GameObject bot)
     {
+        if (bot == null) yield break;
         if (foundSpawnPoints.Count == 0) FindAllSpawnPointsInScene();
         if (foundSpawnPoints.Count == 0) yield break;
 
@@ -74,14 +83,12 @@ public class RaceManager : MonoBehaviour
         if (bot.TryGetComponent<Rigidbody>(out var rb))
         {
             // CORRECCIÓN CRÍTICA: Solo reseteamos físicas si NO es cinemático
-            // Esto evita el error "Setting angular velocity of a kinematic body is not supported"
             if (!rb.isKinematic)
             {
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
             
-            // Lo hacemos cinemático temporalmente para moverlo sin interferencias
             rb.isKinematic = true; 
         }
 
@@ -96,7 +103,6 @@ public class RaceManager : MonoBehaviour
         if (rb != null)
         {
             rb.isKinematic = false;
-            // Doble limpieza post-movimiento para evitar "balas" por inercia acumulada
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }

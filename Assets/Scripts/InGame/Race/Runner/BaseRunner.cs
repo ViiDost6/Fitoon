@@ -145,8 +145,9 @@ public class BaseRunner : NetworkBehaviour
 		List<GameObject> children = new List<GameObject>();
 		for(int i = 0; i < gameObject.transform.childCount; i++)
 		{
-			children.Add(gameObject.transform.GetChild(i).gameObject);
-			children.Concat(GetAllChildrenRecursive(gameObject.transform.GetChild(i).gameObject));
+			GameObject child = gameObject.transform.GetChild(i).gameObject;
+			children.Add(child);
+			children.AddRange(GetAllChildrenRecursive(child));
 		}
 		return children;
 	}

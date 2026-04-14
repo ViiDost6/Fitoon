@@ -241,10 +241,10 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 0}
-  m_InferenceDevice: 0
-  m_BehaviorType: 0
-  m_BehaviorName: Runner_Hard
+  m_Model: {fileID: 5022602860645237092, guid: cc691487578a00f4ca0c73b8eb7d41f8, type: 3}
+  m_InferenceDevice: 1
+  m_BehaviorType: 2
+  m_BehaviorName: Runner
   TeamId: 0
   m_UseChildSensors: 1
   m_UseChildActuators: 1
@@ -298,7 +298,7 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 1000000
   target: {fileID: 0}
-  training: 1
+  training: 0
   fallLimit: -1
   brains:
   - {fileID: 5022602860645237092, guid: 7edfd1409ae43f8488b4381a7451f166, type: 3}
