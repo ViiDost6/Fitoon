@@ -4,12 +4,12 @@ behaviors:
     trainer_type: ppo
     hyperparameters:
       batch_size: 1024
-      buffer_size: 10240
-      learning_rate: 0.00025
+      buffer_size: 20480
+      learning_rate: 0.0005
       beta: 0.01
       epsilon: 0.2
       lambd: 0.95
-      num_epoch: 3
+      num_epoch: 4
       shared_critic: false
       learning_rate_schedule: linear
       beta_schedule: linear
@@ -61,12 +61,12 @@ behaviors:
     trainer_type: ppo
     hyperparameters:
       batch_size: 2048
-      buffer_size: 20480
-      learning_rate: 0.0002
+      buffer_size: 40960
+      learning_rate: 0.0004
       beta: 0.005
       epsilon: 0.2
       lambd: 0.95
-      num_epoch: 4
+      num_epoch: 5
       shared_critic: false
       learning_rate_schedule: linear
       beta_schedule: linear
@@ -119,7 +119,7 @@ behaviors:
     hyperparameters:
       batch_size: 2048
       buffer_size: 20480
-      learning_rate: 0.00015
+      learning_rate: 0.0003
       beta: 0.001
       epsilon: 0.2
       lambd: 0.95

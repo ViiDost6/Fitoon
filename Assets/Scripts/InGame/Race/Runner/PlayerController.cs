@@ -81,7 +81,9 @@ public class PlayerController : BaseRunner
             if (faceTracking.faceRotation != Quaternion.identity)
                 _rb.rotation = Quaternion.Slerp(_rb.rotation, faceTracking.faceRotation, rotationSpeed);
 
-            moveInput = transform.forward * baseSpeed * faceTracking.speed * Mathf.Max(0.1f, speedMultiplier);
+            // Cap the speed multiplier to match bot maximum speeds
+            float cappedSpeed = Mathf.Min(faceTracking.speed, baseSpeed * speedMultiplier / baseSpeed);
+            moveInput = transform.forward * baseSpeed * cappedSpeed * Mathf.Max(0.1f, speedMultiplier);
         }
 #else
         moveInput = transform.forward * baseSpeed * Mathf.Max(0.05f, speedMultiplier);
@@ -90,7 +92,19 @@ public class PlayerController : BaseRunner
         if (_rb != null && !_rb.isKinematic)
         {
             Vector3 vel = _rb.linearVelocity;
-            _rb.linearVelocity = new Vector3(moveInput.x, vel.y, moveInput.z);
+            // Apply a slightly higher speed cap for player than bots (1.2x multiplier for ~20% boost)
+            float maxAllowed = baseSpeed * speedMultiplier * 1.1f;
+            Vector3 flatVel = new Vector3(moveInput.x, 0, moveInput.z);
+            
+            if (flatVel.magnitude > maxAllowed)
+            {
+                Vector3 limitedVel = flatVel.normalized * maxAllowed;
+                _rb.linearVelocity = new Vector3(limitedVel.x, vel.y, limitedVel.z);
+            }
+            else
+            {
+                _rb.linearVelocity = new Vector3(moveInput.x, vel.y, moveInput.z);
+            }
         }
     }
 
@@ -163,10 +177,28 @@ public class PlayerController : BaseRunner
             int medals = Mathf.RoundToInt((runnerAmount - pos + 1 - runnerAmount / 2f) * Mathf.Lerp(15, 5, runnerAmount / 32f));
             if (positionText != null) positionText.text = $"{pos}/{runnerAmount}";
             SaveData.player.medals += medals;
+            
+            // Award coins based on podium position
+            int coinsReward = 0;
+            if (pos == 1)
+                coinsReward = 25;
+            else if (pos == 2)
+                coinsReward = 15;
+            else if (pos == 3)
+                coinsReward = 10;
+            
+            SaveData.player.normalCoins += coinsReward;
+            
             if (pos == 1) SaveData.player.wins++;
         }
         if (faceTracking != null)
             SaveData.player.runnedDistance += (int)faceTracking.GetTotalDistance();
         SaveData.SaveToJson();
+        
+        // Update database with new coins and medals
+        if (DatabaseManager.instance != null)
+        {
+            DatabaseManager.instance.UpdatePlayerData();
+        }
     }
 }

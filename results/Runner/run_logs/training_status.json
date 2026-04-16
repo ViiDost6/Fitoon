@@ -2,58 +2,58 @@
     "Runner_Hard": {
         "checkpoints": [
             {
-                "steps": 4999510,
-                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-4999510.onnx",
-                "reward": 116.62308868995079,
-                "creation_time": 1776114603.1083558,
+                "steps": 8999946,
+                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-8999946.onnx",
+                "reward": 423.2168706810993,
+                "creation_time": 1776283360.2637503,
                 "auxillary_file_paths": [
-                    "results\\Runner\\Runner_Hard\\Runner_Hard-4999510.pt"
+                    "results\\Runner\\Runner_Hard\\Runner_Hard-8999946.pt"
                 ]
             },
             {
-                "steps": 5499672,
-                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-5499672.onnx",
-                "reward": 189.09276153059568,
-                "creation_time": 1776115376.1434693,
+                "steps": 9499933,
+                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-9499933.onnx",
+                "reward": 428.52205578486127,
+                "creation_time": 1776284063.434096,
                 "auxillary_file_paths": [
-                    "results\\Runner\\Runner_Hard\\Runner_Hard-5499672.pt"
+                    "results\\Runner\\Runner_Hard\\Runner_Hard-9499933.pt"
                 ]
             },
             {
-                "steps": 5999863,
-                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-5999863.onnx",
-                "reward": 201.03453413645425,
-                "creation_time": 1776116148.858065,
-                "auxillary_file_paths": [
-                    "results\\Runner\\Runner_Hard\\Runner_Hard-5999863.pt"
-                ]
-            },
-            {
-                "steps": 6239101,
-                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-6239101.onnx",
-                "reward": 158.74826698303224,
-                "creation_time": 1776116531.6354995,
-                "auxillary_file_paths": [
-                    "results\\Runner\\Runner_Hard\\Runner_Hard-6239101.pt"
-                ]
-            },
-            {
-                "steps": 6442501,
-                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-6442501.onnx",
+                "steps": 9860289,
+                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-9860289.onnx",
                 "reward": null,
-                "creation_time": 1776151366.127531,
+                "creation_time": 1776284559.814006,
                 "auxillary_file_paths": [
-                    "results\\Runner\\Runner_Hard\\Runner_Hard-6442501.pt"
+                    "results\\Runner\\Runner_Hard\\Runner_Hard-9860289.pt"
+                ]
+            },
+            {
+                "steps": 9999850,
+                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-9999850.onnx",
+                "reward": 412.2788178580148,
+                "creation_time": 1776324117.6274278,
+                "auxillary_file_paths": [
+                    "results\\Runner\\Runner_Hard\\Runner_Hard-9999850.pt"
+                ]
+            },
+            {
+                "steps": 10000362,
+                "file_path": "results\\Runner\\Runner_Hard\\Runner_Hard-10000362.onnx",
+                "reward": 412.2788178580148,
+                "creation_time": 1776324117.7537327,
+                "auxillary_file_paths": [
+                    "results\\Runner\\Runner_Hard\\Runner_Hard-10000362.pt"
                 ]
             }
         ],
         "final_checkpoint": {
-            "steps": 6442501,
+            "steps": 10000362,
             "file_path": "results\\Runner\\Runner_Hard.onnx",
-            "reward": null,
-            "creation_time": 1776151366.127531,
+            "reward": 412.2788178580148,
+            "creation_time": 1776324117.7537327,
             "auxillary_file_paths": [
-                "results\\Runner\\Runner_Hard\\Runner_Hard-6442501.pt"
+                "results\\Runner\\Runner_Hard\\Runner_Hard-10000362.pt"
             ]
         }
     },

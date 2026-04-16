@@ -3,12 +3,12 @@ behaviors:
     trainer_type: ppo
     hyperparameters:
       batch_size: 1024
-      buffer_size: 10240
-      learning_rate: 0.00025 # Ligeramente menor para asimilar la nueva velocidad directa
+      buffer_size: 20480
+      learning_rate: 0.0005 # Increased for faster speed learning
       beta: 0.01             # Reducido: el bot ya no necesita "explorar" tanto si la velocidad es inmediata
       epsilon: 0.2
       lambd: 0.95
-      num_epoch: 3
+      num_epoch: 4
       learning_rate_schedule: linear
     network_settings:
       normalize: true
@@ -32,12 +32,12 @@ behaviors:
     trainer_type: ppo
     hyperparameters:
       batch_size: 2048
-      buffer_size: 20480
-      learning_rate: 0.0002
+      buffer_size: 40960
+      learning_rate: 0.0004
       beta: 0.005            # Beta bajo para que sea muy preciso con la nueva física
       epsilon: 0.2
       lambd: 0.95
-      num_epoch: 4           # Un epoch extra para estabilizar la política de movimiento
+      num_epoch: 5           # Increased for better policy stability with strong speed signal
       learning_rate_schedule: linear
     network_settings:
       normalize: true
@@ -62,7 +62,7 @@ behaviors:
     hyperparameters:
       batch_size: 2048
       buffer_size: 20480
-      learning_rate: 0.00015 # Aprendizaje lento para manejar picos de velocidad de 100 unidades/s
+      learning_rate: 0.0003 # Increased for speed learning while maintaining stability
       beta: 0.001            # Mínima entropía: queremos ejecución perfecta, no experimentación
       epsilon: 0.2
       lambd: 0.95
