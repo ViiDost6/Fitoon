@@ -11,7 +11,9 @@ public class BotRunner : BaseRunner
 
     void FixedUpdate()
     {
-        if (!canMove || rigidBody == null) return;
+        // Only server simulates bot physics to avoid desynchronization across clients
+        // Bots are server-authoritative, so clients receive updates via NetworkTransform
+        if (!IsServerInitialized || !canMove || rigidBody == null) return;
 
         float turnAmount = moveH * rotationSpeed * 140f * Time.fixedDeltaTime;
         Quaternion nextRotation = rigidBody.rotation * Quaternion.Euler(0, turnAmount, 0);
@@ -44,6 +46,9 @@ public class BotRunner : BaseRunner
     {
         BaseUpdate();
 
+        // Only server updates physics properties to avoid desynchronization
+        if (!IsServerInitialized) return;
+
         RaycastHit hit;
         bool grounded = Physics.Raycast(transform.position, Vector3.down, out hit, 2.5f, whatIsGround);
         if (!rigidBody.isKinematic)
@@ -68,6 +73,28 @@ public class BotRunner : BaseRunner
         {
             SetCharacter(CharacterLoader.CreateRandomCharacterData(), "");
         }
+    }
+
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        
+        // Bots are server-authoritative: clients receive updates via NetworkTransform only
+        // Set rigidbody to kinematic to prevent double simulation
+        if (rigidBody != null && !IsServerInitialized)
+        {
+            rigidBody.isKinematic = true;
+            rigidBody.useGravity = false;
+            rigidBody.interpolation = RigidbodyInterpolation.None;
+        }
+    }
+
+    /// <summary>
+    /// Override animation authority: bots are controlled by the server, not the owner
+    /// </summary>
+    protected override bool HasAnimationAuthority()
+    {
+        return IsServerInitialized;
     }
 
     public void SetMovement(float moveV, float moveH)
