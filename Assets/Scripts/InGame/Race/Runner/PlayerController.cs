@@ -2,203 +2,106 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using FishNet.Object;
-using FishNet.Connection;
+using FishNet.Managing.Statistic;
 using FishNet.Component.Transforming;
+using FishNet.Object.Synchronizing;
 using TMPro;
 
+/// <summary>
+/// This class is used to control the player character. It handles movement and rotation based on face tracking data. It's also used for setting the player's position and medal gain.
+/// </summary>
 public class PlayerController : BaseRunner
 {
-    [Header("UI & Feedback")]
-    [SerializeField] private TextMeshProUGUI positionText; 
+	[SerializeField] new Camera camera;
+    FaceTrackingToMovement faceTracking;
 
-    private FaceTrackingToMovement faceTracking;
-    private Transform activePlatform;
-    private Rigidbody _rb;
-    private NetworkTransform _netTransform;
-
-    public override void OnStartClient()
+	public override void OnStartClient()
     {
-        base.OnStartClient();
-        _rb = GetComponent<Rigidbody>();
-        _netTransform = GetComponent<NetworkTransform>();
-        faceTracking = GetComponent<FaceTrackingToMovement>();
-        
-        BaseAwake();
+		Debug.Log("Player Starting");
+		BaseAwake();
+		faceTracking = GetComponent<FaceTrackingToMovement>();
 
-        if (Owner.IsLocalClient)
-        {
-            if (_rb != null) 
-            {
-                _rb.isKinematic = false;
-                // Usamos Interpolate para que el renderizado de Unity suavice el movimiento entre FixedUpdates
-                _rb.interpolation = RigidbodyInterpolation.Interpolate;
-                _rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            }
+		if (Owner.IsLocalClient)
+		{
+			Camera.main.GetComponent<CameraFollowPlayer>().target = transform;
+			SaveData.ReadFromJson();
+					Debug.Log("[CHARLOAD] Client" + SaveData.player.playerCharacterData.hairColor + " " + SaveData.player.playerCharacterData.skinColor + " " + SaveData.player.playerCharacterData.topColor + " " + SaveData.player.playerCharacterData.bottomColor);
 
-            var mainCam = Camera.main;
-            if (mainCam != null && mainCam.TryGetComponent<CameraFollowPlayer>(out var follow))
-            {
-                follow.target = transform;
-            }
-            
-            SaveData.ReadFromJson();
-            if (SaveData.player != null && SaveData.player.playerCharacterData != null)
-            {
-                SetCharacter(SaveData.player.playerCharacterData, SaveData.player.username);
-            }
-        }
-        else
-        {
-            if (_rb != null) 
-            {
-                _rb.isKinematic = true; 
-                _rb.useGravity = false;
-                // Los proxies no necesitan interpolación de RB si el NetworkTransform ya la hace
-                _rb.interpolation = RigidbodyInterpolation.None; 
-            }
-            if (faceTracking != null) faceTracking.enabled = false;
-        }
-    }
+			SetCharacter(SaveData.player.playerCharacterData, SaveData.player.username);
+		}
+		else
+		{
+			faceTracking.enabled = false;
+			GetComponent<PlayerController>().enabled = false;
+		}
+	}
 
-    private void FixedUpdate()
-    {
-        // Solo el dueño local simula para evitar jitter por doble corrección (servidor-cliente)
-        if (!IsOwner || !canMove || _rb == null) return;
-
-        HandleLocomotion();
-        HandleEnvironment();
-
-        BaseFixedUpdate();
-    }
-
-    private void HandleLocomotion()
-    {
-        Vector3 moveInput = Vector3.zero;
-
+	private void FixedUpdate()
+	{
 #if !UNITY_EDITOR
-        if (faceTracking != null && faceTracking.detectado)
-        {
-            if (faceTracking.faceRotation != Quaternion.identity)
-                _rb.rotation = Quaternion.Slerp(_rb.rotation, faceTracking.faceRotation, rotationSpeed);
-
-            // Cap the speed multiplier to match bot maximum speeds
-            float cappedSpeed = Mathf.Min(faceTracking.speed, baseSpeed * speedMultiplier / baseSpeed);
-            moveInput = transform.forward * baseSpeed * cappedSpeed * Mathf.Max(0.1f, speedMultiplier);
-        }
+		if (faceTracking == null || !faceTracking.detectado || !canMove || !IsOwner)
+		{
+			return;
+		}
+		Debug.Log("Player Moving");
+		rigidBody.linearVelocity = new Vector3(0, rigidBody.linearVelocity.y, 0);
+		rigidBody.linearVelocity += baseSpeed * faceTracking.speed * Mathf.Max(0.1f, speedMultiplier) * transform.forward;
+		rigidBody.rotation = Quaternion.Slerp(rigidBody.rotation, faceTracking.faceRotation, rotationSpeed);
 #else
-        moveInput = transform.forward * baseSpeed * Mathf.Max(0.05f, speedMultiplier);
+		if (!canMove || !IsOwner)
+		{
+			return;
+		}
+		rigidBody.linearVelocity = new Vector3(0, rigidBody.linearVelocity.y, 0);
+		rigidBody.linearVelocity += baseSpeed * Mathf.Max(0.1f, speedMultiplier) * transform.forward + 0.01f * Vector3.right;
 #endif
+		if (Physics.Raycast(transform.position, Vector3.down, out _, runnerHeight * 0.5f + 1f, whatIsGround))
+		{
+			rigidBody.linearDamping = groundDrag;
+		}
+		else
+		{
+			rigidBody.linearDamping = 0;
+		}
+		BaseFixedUpdate();
+	}
 
-        if (_rb != null && !_rb.isKinematic)
-        {
-            Vector3 vel = _rb.linearVelocity;
-            // Apply a slightly higher speed cap for player than bots (1.2x multiplier for ~20% boost)
-            float maxAllowed = baseSpeed * speedMultiplier * 1.1f;
-            Vector3 flatVel = new Vector3(moveInput.x, 0, moveInput.z);
-            
-            if (flatVel.magnitude > maxAllowed)
-            {
-                Vector3 limitedVel = flatVel.normalized * maxAllowed;
-                _rb.linearVelocity = new Vector3(limitedVel.x, vel.y, limitedVel.z);
-            }
-            else
-            {
-                _rb.linearVelocity = new Vector3(moveInput.x, vel.y, moveInput.z);
-            }
-        }
-    }
+	void Update()
+	{
+		BaseUpdate();
+	}
 
-    private void HandleEnvironment()
-    {
-        float rayLength = runnerHeight * 0.5f + 0.4f; 
-        
-        if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, rayLength, whatIsGround))
-        {
-            // Solo cambiamos el damping si es diferente para evitar jitter físico
-            if (_rb.linearDamping != groundDrag) _rb.linearDamping = groundDrag;
-            
-            if (hit.collider.TryGetComponent<NetworkObject>(out var netObj))
-            {
-                if (activePlatform != hit.collider.transform)
-                {
-                    activePlatform = hit.collider.transform;
-                    SetParentServerRpc(netObj);
-                }
-            }
+	public void SetPosition(int pos, int runnerAmount)
+	{
+		SetPositionServerRpc(pos, runnerAmount);
+	}
 
-            // CORRECCIÓN ANTI-JITTER:
-            // En lugar de asignar la posición directamente, nos acercamos suavemente
-            float targetY = hit.point.y + (runnerHeight * 0.5f) + 0.01f;
-            if (Mathf.Abs(transform.position.y - targetY) > 0.005f) // Umbral de tolerancia
-            {
-                float smoothY = Mathf.MoveTowards(transform.position.y, targetY, Time.fixedDeltaTime * 5f);
-                transform.position = new Vector3(transform.position.x, smoothY, transform.position.z);
-            }
-        }
-        else
-        {
-            if (_rb.linearDamping != 0) _rb.linearDamping = 0;
-            if (activePlatform != null)
-            {
-                activePlatform = null;
-                SetParentServerRpc(null);
-            }
-        }
-    }
+	[ServerRpc (RequireOwnership = false)]
+	void SetPositionServerRpc(int pos, int runnerAmount)
+	{
+		SetPositionObserversRpc(pos, runnerAmount);
+	}
 
-    [ServerRpc]
-    private void SetParentServerRpc(NetworkObject parentNetObj)
-    {
-        if (parentNetObj != null)
-            transform.SetParent(parentNetObj.transform, true);
-        else
-            transform.SetParent(null);
-    }
-
-    // --- RPCs de Puntuación (Sin cambios) ---
-    public void SetPosition(int pos, int runnerAmount)
-    {
-        if (!IsOwner) return;
-        SetPositionServerRpc(pos, runnerAmount);
-    }
-
-    [ServerRpc]
-    void SetPositionServerRpc(int pos, int runnerAmount, NetworkConnection conn = null)
-    {
-        SetPositionTargetRpc(conn, pos, runnerAmount);
-    }
-
-    [TargetRpc]
-    void SetPositionTargetRpc(NetworkConnection conn, int pos, int runnerAmount)
-    {
-        if (SaveData.player == null) return;
-        if (runnerAmount >= 3)
-        {
-            int medals = Mathf.RoundToInt((runnerAmount - pos + 1 - runnerAmount / 2f) * Mathf.Lerp(15, 5, runnerAmount / 32f));
-            if (positionText != null) positionText.text = $"{pos}/{runnerAmount}";
-            SaveData.player.medals += medals;
-            
-            // Award coins based on podium position
-            int coinsReward = 0;
-            if (pos == 1)
-                coinsReward = 25;
-            else if (pos == 2)
-                coinsReward = 15;
-            else if (pos == 3)
-                coinsReward = 10;
-            
-            SaveData.player.normalCoins += coinsReward;
-            
-            if (pos == 1) SaveData.player.wins++;
-        }
-        if (faceTracking != null)
-            SaveData.player.runnedDistance += (int)faceTracking.GetTotalDistance();
-        SaveData.SaveToJson();
-        
-        // Update database with new coins and medals
-        if (DatabaseManager.instance != null)
-        {
-            DatabaseManager.instance.UpdatePlayerData();
-        }
-    }
+	[ObserversRpc]
+	void SetPositionObserversRpc(int pos, int runnerAmount)
+	{
+		if (!IsOwner)
+		{
+			return;
+		}
+		if (runnerAmount >= 3)
+		{
+			int medals = Mathf.RoundToInt((runnerAmount - pos + 1 - runnerAmount / 2) * Mathf.Lerp(15, 5, runnerAmount / 32f));
+			GameObject.Find("PositionText").GetComponent<TextMeshProUGUI>().text = pos + "/" + runnerAmount;
+			SaveData.player.medals += medals;
+			SaveData.player.normalCoins += 5;
+			if (pos == 1)
+			{
+				SaveData.player.wins++;
+			}
+		}
+		SaveData.player.runnedDistance += (int)faceTracking.GetTotalDistance();
+		SaveData.SaveToJson();
+		//Debug.Log("Total medals: " + SaveData.player.medals + "\nTotal distance: " + SaveData.player.runnedDistance + "\nMedals: "  + medals + "\nDistance: " + (int)faceTracking.GetTotalDistance());
+	}
 }
