@@ -410,5 +410,10 @@ namespace FishNet.Discovery
 			secret = s;
 			_secretBytes = Encoding.UTF8.GetBytes(secret);
 		}
+
+		public string GetSecret()
+		{
+			return secret;
+		}
 	}
 }

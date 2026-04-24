@@ -10,5 +10,14 @@ public class Switch : MonoBehaviour
     {
         enabledState.SetActive(state);
         disabledState.SetActive(!state);
+
+        if (state)
+        {
+            DiscoveryHandler.isBotsEnabled = "BotsEnabled";
+        }
+        else
+        {
+            DiscoveryHandler.isBotsEnabled = "BotsDisabled";
+        }
     }
 }

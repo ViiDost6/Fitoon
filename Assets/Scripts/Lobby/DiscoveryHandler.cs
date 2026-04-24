@@ -12,6 +12,7 @@ using UnityEngine;
 public class DiscoveryHandler : MonoBehaviour
 {
 	public static string Passcode;
+	public static string isBotsEnabled = "BotsEnabled";
 	NetworkDiscovery netDiscovery;
 	[SerializeField] NetworkManager networkManager;
 	[SerializeField] ushort port = 7077;    //This is the port where the game is hosted.
@@ -26,9 +27,15 @@ public class DiscoveryHandler : MonoBehaviour
 		netDiscovery = networkManager.GetComponent<NetworkDiscovery>();
 		if (Passcode != null)
 		{
-			netDiscovery.ChangeSecret(Passcode);
+			Debug.LogWarning("Passcode: '" + Passcode + "'");
+			Debug.LogWarning("DiscoveryHandler.isBotsEnabled: '" + DiscoveryHandler.isBotsEnabled + "'");
+			
+			string combined = Passcode + isBotsEnabled;
+			Debug.LogWarning("Combined: '" + combined + "'");
+			
+			netDiscovery.ChangeSecret(combined);
 		}
-		Debug.Log(Passcode);
+		Debug.LogWarning("Secret final en Discovery: " + netDiscovery.GetSecret());
 		netDiscovery.ServerFoundCallback += ConnectToServer;
 		BeginSearch();
 	}
