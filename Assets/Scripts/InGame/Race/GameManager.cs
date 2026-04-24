@@ -117,6 +117,8 @@ public class GameManager : NetworkBehaviour
 
     void InitializeBots()
     {
+        if (DiscoveryHandler.isBotsEnabled == "BotsDisabled") return;
+        
 		// Balanced difficulty distribution for 32 bots
 		// Easy: 0-10 (11 bots), Medium: 11-20 (10 bots), Hard: 21-31 (11 bots)
 		int easyCount = 11;

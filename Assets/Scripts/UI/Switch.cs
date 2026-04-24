@@ -6,6 +6,12 @@ public class Switch : MonoBehaviour
 {
     public GameObject enabledState;
     public GameObject disabledState;
+
+    private void Update()
+    {
+        Debug.Log("Current Switch State: " + (enabledState.activeSelf ? "Enabled" : "Disabled"));
+    }
+    
     public void SetSwitchState(bool state)
     {
         enabledState.SetActive(state);

@@ -384,7 +384,12 @@ public class InitialUIManager : UIManager
 
     public void JoinLobby(bool privateLobby)
     {
-        if (!privateLobby) DiscoveryHandler.Passcode = null;
+        if (!privateLobby)
+        {
+            DiscoveryHandler.Passcode = null;
+            DiscoveryHandler.isBotsEnabled = "BotsEnabled";
+        }
+        DiscoveryHandler.Passcode = null;
         Debug.Log("Passcode: " + DiscoveryHandler.Passcode);
         SessionDataHolder.Reset();
         SceneManager.LoadScene("LobbyScene");

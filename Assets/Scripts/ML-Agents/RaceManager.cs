@@ -35,11 +35,7 @@ public class RaceManager : MonoBehaviour
 
     void SpawnBots()
     {
-        if (botPrefab == null)
-        {
-            Debug.LogError("[RaceManager] botPrefab is null! Assign it in the inspector.");
-            return;
-        }
+        if (DiscoveryHandler.isBotsEnabled == "BotsDisabled") return;
         if (foundSpawnPoints.Count == 0) return;
 
         for (int i = 0; i < botCount; i++)
@@ -65,6 +61,8 @@ public class RaceManager : MonoBehaviour
     public void RespawnBot(GameObject bot)
     {
         if (bot == null) return;
+        if (DiscoveryHandler.isBotsEnabled == "BotsDisabled") return;
+        
         if (this.gameObject.activeInHierarchy)
         {
             StartCoroutine(SafeRespawn(bot));

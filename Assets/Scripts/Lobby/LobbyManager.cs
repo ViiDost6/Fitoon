@@ -133,6 +133,7 @@ public class LobbyManager : NetworkBehaviour
 
 	public void ExitButton()
 	{
+		DiscoveryHandler.isBotsEnabled = "BotsEnabled";
 		if (InstanceFinder.NetworkManager != null)
 		{
 			InstanceFinder.NetworkManager.ClientManager.StopConnection();
@@ -169,6 +170,9 @@ public class LobbyManager : NetworkBehaviour
 	[Server]
 	public void AddBot()
 	{
+		// Evita el spawn si los bots están deshabilitados en el Switch
+		if (DiscoveryHandler.isBotsEnabled == "BotsDisabled") return;
+
 		botIdCounter++;
 		string botName = "Bot_" + botIdCounter;
 
