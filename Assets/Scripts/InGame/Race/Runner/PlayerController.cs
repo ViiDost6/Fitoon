@@ -45,7 +45,11 @@ public class PlayerController : BaseRunner
 		}
 		Debug.Log("Player Moving");
 		rigidBody.linearVelocity = new Vector3(0, rigidBody.linearVelocity.y, 0);
-		rigidBody.linearVelocity += baseSpeed * faceTracking.speed * Mathf.Max(0.1f, speedMultiplier) * transform.forward;
+		// Un tercio más lento = 2/3 de la velocidad original
+		float playerSpeed = baseSpeed * faceTracking.speed * Mathf.Max(0.1f, speedMultiplier) * (2f / 3f);
+		// Asegurar mínimo de 1 m/s
+		playerSpeed = Mathf.Max(1f, playerSpeed);
+		rigidBody.linearVelocity += playerSpeed * transform.forward;
 		rigidBody.rotation = Quaternion.Slerp(rigidBody.rotation, faceTracking.faceRotation, rotationSpeed);
 #else
 		if (!canMove || !IsOwner)
@@ -53,7 +57,11 @@ public class PlayerController : BaseRunner
 			return;
 		}
 		rigidBody.linearVelocity = new Vector3(0, rigidBody.linearVelocity.y, 0);
-		rigidBody.linearVelocity += baseSpeed * Mathf.Max(0.1f, speedMultiplier) * transform.forward + 0.01f * Vector3.right;
+		// Un tercio más lento = 2/3 de la velocidad original
+		float playerSpeed = baseSpeed * Mathf.Max(0.1f, speedMultiplier) * (2f / 3f);
+		// Asegurar mínimo de 1 m/s
+		playerSpeed = Mathf.Max(1f, playerSpeed);
+		rigidBody.linearVelocity += playerSpeed * transform.forward + 0.01f * Vector3.right;
 #endif
 		if (Physics.Raycast(transform.position, Vector3.down, out _, runnerHeight * 0.5f + 1f, whatIsGround))
 		{

@@ -10,7 +10,6 @@ Library: C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generate
 --target-framework=NetFramework
 --generate-link-xml=Temp\burst.link.xml
 --temp-folder=C:\Fitoon\Temp\Burst
---debug=LineOnly
 --key-folder=C:/Program Files/Unity/Hub/Editor/6000.3.6f1/Editor/Data/PlaybackEngines/AndroidPlayer
 --decode-folder=C:\Fitoon\Library\Burst
 --output=C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generated
@@ -29,7 +28,6 @@ Library: C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generate
 --float-mode=Fast
 --generate-link-xml=Temp\burst.link.xml
 --temp-folder=C:\Fitoon\Temp\Burst
---debug=LineOnly
 --key-folder=C:/Program Files/Unity/Hub/Editor/6000.3.6f1/Editor/Data/PlaybackEngines/AndroidPlayer
 --decode-folder=C:\Fitoon\Library\Burst
 --output=C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generated
@@ -47,7 +45,6 @@ Library: C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generate
 --target-framework=NetFramework
 --generate-link-xml=Temp\burst.link.xml
 --temp-folder=C:\Fitoon\Temp\Burst
---debug=LineOnly
 --key-folder=C:/Program Files/Unity/Hub/Editor/6000.3.6f1/Editor/Data/PlaybackEngines/AndroidPlayer
 --decode-folder=C:\Fitoon\Library\Burst
 --output=C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generated
@@ -165,7 +162,6 @@ Library: C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generate
 --float-mode=Fast
 --generate-link-xml=Temp\burst.link.xml
 --temp-folder=C:\Fitoon\Temp\Burst
---debug=LineOnly
 --key-folder=C:/Program Files/Unity/Hub/Editor/6000.3.6f1/Editor/Data/PlaybackEngines/AndroidPlayer
 --decode-folder=C:\Fitoon\Library\Burst
 --output=C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generated
@@ -240,7 +236,6 @@ Library: C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generate
 --target-framework=NetFramework
 --generate-link-xml=Temp\burst.link.xml
 --temp-folder=C:\Fitoon\Temp\Burst
---debug=LineOnly
 --key-folder=C:/Program Files/Unity/Hub/Editor/6000.3.6f1/Editor/Data/PlaybackEngines/AndroidPlayer
 --decode-folder=C:\Fitoon\Library\Burst
 --output=C:\Fitoon\Temp\BurstOutput\tempburstlibs\armeabi-v7a\lib_burst_generated
